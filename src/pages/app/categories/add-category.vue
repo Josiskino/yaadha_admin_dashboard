@@ -1,4 +1,6 @@
 <script setup>
+import { useFirebase } from '@/composables/useFirebase'
+import { ref } from 'vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -60,19 +62,47 @@ const resetForm = () => {
   subCategories.value = [{ id: 1, name: '' }]
 }
 
-const handleFileChange = event => {
+const handleFileChange = async event => {
   const file = event.target.files?.[0]
   
   if (file) {
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('L\'image est trop volumineuse. Veuillez choisir une image de moins de 2MB.')
+      
+      return
+    }
+
     imageFile.value = file
     
-    // Preview image
+    // Preview image (temporary for display)
     const reader = new FileReader()
     
     reader.onload = e => {
       imageUrl.value = e.target.result
     }
     reader.readAsDataURL(file)
+    
+    // Upload to Firebase Storage
+    try {
+      const { storage } = useFirebase()
+      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage')
+      
+      const storageRef = ref(storage, `categories/${Date.now()}_${file.name}`)
+
+      await uploadBytes(storageRef, file)
+
+      const url = await getDownloadURL(storageRef)
+      
+      imageUrl.value = url // Store URL instead of base64
+      imageFile.value = null // Clear file since we have URL
+      console.log('Image uploaded to Storage:', url)
+    } catch (error) {
+      console.error('Error uploading image:', error)
+
+      // Keep base64 for now if Storage upload fails
+      console.log('Keeping base64 image due to Storage error')
+    }
   }
 }
 
@@ -99,14 +129,29 @@ const onSubmit = () => {
       // Filter out empty sub-categories
       const filledSubCategories = subCategories.value.filter(sc => sc.name.trim())
       
-      emit('categoryData', {
+      // At least one sub-category is required
+      if (filledSubCategories.length === 0) {
+        // Show error message
+        return
+      }
+      
+      // If image is base64 and too large, don't include it
+      let imageToInclude = imageUrl.value
+      if (imageToInclude && imageToInclude.startsWith('data:') && imageToInclude.length > 1000000) {
+        console.warn('Image too large for Firestore, skipping image')
+        imageToInclude = null
+      }
+
+      const dataToEmit = {
         name: categoryName.value,
         description: description.value,
         status: status.value,
-        image: imageUrl.value,
+        image: imageToInclude,
         subCategories: filledSubCategories,
         parentId: null,
-      })
+      }
+      
+      emit('categoryData', dataToEmit)
       emit('update:isDrawerOpen', false)
       
       nextTick(() => {

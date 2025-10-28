@@ -1,9 +1,61 @@
 <script setup>
+import { ref } from 'vue'
 import AddCategoryDrawer from './add-category.vue'
 
 // Composable pour gérer les catégories avec Firebase
 const { db } = useFirebase()
 const { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } = await import('firebase/firestore')
+
+// 👉 Notifications
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
+
+const showNotification = (message, type = 'success') => {
+  snackbarText.value = message
+  snackbarColor.value = type
+  snackbar.value = true
+}
+
+// 👉 Delete Confirmation Modal
+const isDeleteModalVisible = ref(false)
+const categoryToDelete = ref(null)
+
+const showDeleteConfirmation = categoryId => {
+  categoryToDelete.value = categoryId
+  isDeleteModalVisible.value = true
+}
+
+const confirmDelete = async () => {
+  if (!categoryToDelete.value) return
+  
+  try {
+    await deleteDoc(doc(db, 'categories', categoryToDelete.value))
+    
+    // Delete from selectedRows
+    const index = selectedRows.value.findIndex(row => row === categoryToDelete.value)
+    
+    if (index !== -1)
+      selectedRows.value.splice(index, 1)
+    
+    // Refetch categories
+    const fetchedCategories = await fetchCategories()
+    
+    categories.value = fetchedCategories
+    
+    // Show success notification
+    showNotification('Category deleted successfully!', 'success')
+    
+    console.log('Category deleted successfully')
+  } catch (error) {
+    console.error('Error deleting category:', error)
+    showNotification('Error deleting category', 'error')
+  } finally {
+    // Close modal
+    isDeleteModalVisible.value = false
+    categoryToDelete.value = null
+  }
+}
 
 // 👉 Store
 const searchQuery = ref('')
@@ -172,20 +224,35 @@ const selectedCategory = ref(null)
 
 const addNewCategory = async categoryData => {
   try {
+    console.log('Adding category with data:', categoryData)
+    
     await addDoc(collection(db, 'categories'), {
-      ...categoryData,
+      name: categoryData.name,
+      description: categoryData.description,
+      status: categoryData.status,
+      image: categoryData.image,
+      subCategories: categoryData.subCategories,
+      parentId: categoryData.parentId,
       createdAt: new Date(),
       updatedAt: new Date(),
     })
     
+    console.log('Category added successfully')
+
     // Refetch categories
     const fetchedCategories = await fetchCategories()
-    
+
     categories.value = fetchedCategories
-    
+
     isAddNewCategoryDrawerVisible.value = false
+
+    // Show success notification
+    showNotification('Category created successfully!', 'success')
+
+    console.log('Categories refreshed')
   } catch (error) {
     console.error('Error adding category:', error)
+    showNotification('Error creating category', 'error')
   }
 }
 
@@ -204,28 +271,17 @@ const editCategory = async (categoryData, categoryId) => {
     categories.value = fetchedCategories
     
     isEditCategoryDrawerVisible.value = false
+    
+    // Show success notification
+    showNotification('Category updated successfully!', 'success')
   } catch (error) {
     console.error('Error updating category:', error)
+    showNotification('Error updating category', 'error')
   }
 }
 
 const deleteCategory = async id => {
-  try {
-    await deleteDoc(doc(db, 'categories', id))
-    
-    // Delete from selectedRows
-    const index = selectedRows.value.findIndex(row => row === id)
-    
-    if (index !== -1)
-      selectedRows.value.splice(index, 1)
-    
-    // Refetch categories
-    const fetchedCategories = await fetchCategories()
-    
-    categories.value = fetchedCategories
-  } catch (error) {
-    console.error('Error deleting category:', error)
-  }
+  showDeleteConfirmation(id)
 }
 
 const openEditCategory = category => {
@@ -551,5 +607,62 @@ watch(categories, newCategories => {
       :category="selectedCategory"
       @category-data="addNewCategory"
     />
+
+    <!-- 👉 Notification Snackbar -->
+    <VSnackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      timeout="3000"
+      location="top right"
+    >
+      {{ snackbarText }}
+    </VSnackbar>
+
+    <!-- 👉 Delete Confirmation Modal -->
+    <VDialog
+      v-model="isDeleteModalVisible"
+      max-width="500"
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center">
+          <VIcon
+            icon="tabler-alert-triangle"
+            color="warning"
+            class="me-3"
+          />
+          Confirm Deletion
+        </VCardTitle>
+
+        <VCardText>
+          <p class="text-base mb-4">
+            Are you sure you want to delete this category?
+          </p>
+          <p class="text-sm text-medium-emphasis">
+            This action is irreversible and will permanently delete the category along with all its sub-categories.
+          </p>
+        </VCardText>
+
+        <VCardActions class="justify-end">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDeleteModalVisible = false"
+          >
+            Cancel
+          </VBtn>
+          <VBtn
+            color="error"
+            variant="flat"
+            @click="confirmDelete"
+          >
+            <VIcon
+              icon="tabler-trash"
+              class="me-2"
+            />
+            Delete
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </section>
 </template>
