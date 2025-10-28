@@ -19,7 +19,9 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     'auth-login-example': RouteRecordInfo<'auth-login-example', '/auth/LoginExample', Record<never, never>, Record<never, never>>,
+    'categories-add-category': RouteRecordInfo<'categories-add-category', '/categories/add-category', Record<never, never>, Record<never, never>>,
     'categories-categories-dashboard': RouteRecordInfo<'categories-categories-dashboard', '/categories/categories-dashboard', Record<never, never>, Record<never, never>>,
+    'dashboard-dashboard': RouteRecordInfo<'dashboard-dashboard', '/dashboard/dashboard', Record<never, never>, Record<never, never>>,
     'firebase-firebase-test': RouteRecordInfo<'firebase-firebase-test', '/firebase/FirebaseTest', Record<never, never>, Record<never, never>>,
     'shop': RouteRecordInfo<'shop', '/shop', Record<never, never>, Record<never, never>>,
     'template$error': RouteRecordInfo<'template$error', '/template/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,

@@ -6,7 +6,8 @@ import { themeConfig } from '@themeConfig'
 import Footer from '@/layouts/components/Footer.vue'
 import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
 import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
-import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
+
+// import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
 import NavBarI18n from '@core/components/I18n.vue'
@@ -24,7 +25,10 @@ import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
       >
         <VNodeRenderer :nodes="themeConfig.app.logo" />
 
-        <h1 class="app-title font-weight-bold leading-normal text-xl text-capitalize" style="display: none;">
+        <h1
+          class="app-title font-weight-bold leading-normal text-xl text-capitalize"
+          style="display: none;"
+        >
           {{ themeConfig.app.title }}
         </h1>
       </RouterLink>
@@ -38,7 +42,7 @@ import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
       />
 
       <NavbarThemeSwitcher />
-      <NavbarShortcuts />
+      <!-- <NavbarShortcuts /> -->
       <NavBarNotifications class="me-2" />
       <UserProfile />
     </template>
