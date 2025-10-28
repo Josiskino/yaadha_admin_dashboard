@@ -14,27 +14,35 @@ if (typeof window !== 'undefined') {
         const auth = app.config.globalProperties.$auth
         const db = app.config.globalProperties.$db
         const analytics = app.config.globalProperties.$analytics
+        const storage = app.config.globalProperties.$storage
         
         console.log('✅ Firebase Auth:', auth ? 'Connecté' : 'Non connecté')
         console.log('✅ Firebase Firestore:', db ? 'Connecté' : 'Non connecté')
         console.log('✅ Firebase Analytics:', analytics ? 'Connecté' : 'Non connecté')
-        
-        // Test de connexion Firestore
-        if (db) {
-          import('firebase/firestore').then(({ collection, getDocs }) => {
-            getDocs(collection(db, 'connection-tests'))
-              .then(snapshot => {
-                console.log('✅ Firestore accessible:', snapshot.size, 'documents trouvés')
-              })
-              .catch(err => {
-                console.error('❌ Erreur Firestore:', err)
-              })
-          })
-        }
+        console.log('✅ Firebase Storage:', storage ? 'Connecté' : 'Non connecté')
         
         // Test de connexion Auth
         if (auth) {
-          console.log('✅ Auth state:', auth.currentUser ? 'Utilisateur connecté' : 'Aucun utilisateur')
+          auth.onAuthStateChanged(user => {
+            if (user) {
+              console.log('✅ Auth state: Utilisateur connecté -', user.email)
+            } else {
+              console.log('ℹ️ Auth state: Aucun utilisateur connecté (normal)')
+            }
+          })
+        }
+        
+        // Vérifier que Firestore est bien initialisé
+        if (db) {
+          console.log('✅ Firestore instance:', {
+            app: db.app?.name,
+            type: db.type,
+            '_settings': db._settings ? 'Configuré' : 'Non configuré',
+          })
+          
+          // Test simple de connexion (sans import dynamique)
+          // La connexion réelle sera testée par le composable useFirebaseTest
+          console.log('ℹ️ Pour tester la connexion Firestore en détail, utilisez le composable useFirebaseTest dans une page')
         }
       } else {
         console.log('❌ Vue app non trouvée')

@@ -1,6 +1,7 @@
 import { analytics, auth, db, storage } from '@/config/firebase'
 
-export default {
+// Define a Vue plugin object
+const FirebasePlugin = {
   install(app) {
     // Make Firebase services available globally
     app.config.globalProperties.$auth = auth
@@ -14,4 +15,9 @@ export default {
     app.provide('$storage', storage)
     app.provide('$analytics', analytics)
   },
+}
+
+// Export as a function that uses the plugin
+export default function (app) {
+  app.use(FirebasePlugin)
 }

@@ -12,6 +12,6 @@ export async function loadFonts() {
     },
   })
 }
-export default function () {
+export default function (app) {
   loadFonts()
 }
