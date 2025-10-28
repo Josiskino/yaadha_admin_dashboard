@@ -353,6 +353,9 @@
     "watchThrottled": true,
     "watchTriggerable": true,
     "watchWithFilter": true,
-    "whenever": true
+    "whenever": true,
+    "useAuth": true,
+    "useFirebase": true,
+    "useFirebaseTest": true
   }
 }

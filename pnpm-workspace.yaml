@@ -1,0 +1,6 @@
+overrides:
+  '@firebasegen/default-connector': link:dataconnect-generated/js/default-connector
+  '@tiptap/core': ^2
+  '@types/video.js': ^7
+  postcss: ^8
+  sass: 1.76.0
