@@ -20,20 +20,26 @@ import {
 } from 'firebase/firestore'
 import { ref } from 'vue'
 
+// 👉 Singleton state - shared across all useFirebase() calls
+let authListenerInitialized = false
+const currentUser = ref(null)
+
+// Initialize auth listener only once
+if (!authListenerInitialized && typeof window !== 'undefined') {
+  onAuthStateChanged(auth, user => {
+    currentUser.value = user
+  })
+  authListenerInitialized = true
+}
+
 /**
  * Vue composable for Firebase services
  * @returns {Object} Firebase utilities and user state
  */
 export function useFirebase() {
-  const currentUser = ref(null)
+  // Local state for each instance
   const loading = ref(false)
   const error = ref(null)
-
-  // Listen to auth state changes
-  onAuthStateChanged(auth, user => {
-    console.log('Auth state changed:', user) // Debug log
-    currentUser.value = user
-  })
 
   /**
    * Sign up with email and password

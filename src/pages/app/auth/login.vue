@@ -94,7 +94,7 @@ const handleLogin = async () => {
                   autofocus
                   label="Email"
                   type="email"
-                  placeholder="admin@yaadha.com"
+                  placeholder="contact@company.com"
                   :rules="[requiredValidator, emailValidator]"
                 />
               </VCol>
