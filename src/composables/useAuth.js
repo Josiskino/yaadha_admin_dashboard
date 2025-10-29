@@ -1,46 +1,109 @@
-import { computed } from 'vue'
-import { useFirebase } from './useFirebase'
+import { useFirebase } from '@/composables/useFirebase'
+import { useRouter } from 'vue-router'
 
-/**
- * Vue composable for authentication
- * @returns {Object} Auth utilities and state
- */
-export function useAuth() {
-  const { currentUser, loading, error, signIn, signUp, signOut, resetPassword, updateUserProfile } = useFirebase()
+export const useAuth = () => {
+  const { currentUser, signIn, signOut, getDocument } = useFirebase()
+  const router = useRouter()
 
+  // Check if user is authenticated
   const isAuthenticated = computed(() => !!currentUser.value)
-  const userEmail = computed(() => currentUser.value?.email)
-  const userDisplayName = computed(() => currentUser.value?.displayName)
-  const userPhotoURL = computed(() => currentUser.value?.photoURL)
-  const uid = computed(() => currentUser.value?.uid)
 
-  const user = computed(() => ({
-    email: userEmail.value,
-    displayName: userDisplayName.value,
-    photoURL: userPhotoURL.value,
-    uid: uid.value,
-    emailVerified: currentUser.value?.emailVerified,
-  }))
+  // Get current user data from Firestore
+  const getUserData = async () => {
+    if (!currentUser.value) 
+      return null
+    
+    try {
+      return await getDocument('admin', currentUser.value.uid)
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+      
+      return null
+    }
+  }
+
+  // Login function
+  const login = async (email, password) => {
+    try {
+      const userCredential = await signIn(email, password)
+      const userData = await getDocument('admin', userCredential.user.uid)
+      
+      if (userData && userData.role) {
+        // Set cookies for compatibility with existing code
+        useCookie('accessToken').value = userCredential.user.accessToken
+        useCookie('userData').value = {
+          id: userCredential.user.uid,
+          email: userCredential.user.email,
+          fullName: userData.fullName,
+          role: userData.role,
+          avatar: userData.avatar,
+        }
+        
+        return { success: true, userData }
+      } else {
+        throw new Error('User not found in admin database')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Logout function
+  const logout = async () => {
+    try {
+      await signOut()
+      
+      // Clear cookies
+      useCookie('accessToken').value = null
+      useCookie('userData').value = null
+      useCookie('userAbilityRules').value = null
+      
+      // Redirect to login
+      await router.push('/auth/login')
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Logout error:', error)
+      
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Check user role and redirect accordingly
+  const redirectBasedOnRole = async () => {
+    if (!currentUser.value) {
+      await router.push('/auth/login')
+      
+      return
+    }
+
+    try {
+      const userData = await getUserData()
+      
+      if (userData && userData.role) {
+        if (userData.role === 'administrator' || userData.role === 'manager') {
+          await router.push('/admin/admin-dashboard')
+        } else {
+          await router.push('/roles')
+        }
+      } else {
+        await router.push('/roles')
+      }
+    } catch (error) {
+      console.error('Error redirecting based on role:', error)
+      
+      await router.push('/auth/login')
+    }
+  }
 
   return {
-    // State
-    user,
     currentUser,
     isAuthenticated,
-    loading,
-    error,
-
-    // User info
-    userEmail,
-    userDisplayName,
-    userPhotoURL,
-    uid,
-
-    // Methods
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    updateUserProfile,
+    getUserData,
+    login,
+    logout,
+    redirectBasedOnRole,
   }
 }

@@ -153,6 +153,14 @@ const roles = [
 ]
 
 const resolveUserRoleVariant = role => {
+  // Handle null or undefined role
+  if (!role) {
+    return {
+      color: 'warning',
+      icon: 'tabler-user-question',
+    }
+  }
+  
   const roleLowerCase = role.toLowerCase()
   if (roleLowerCase === 'administrator')
     return {

@@ -5,6 +5,9 @@ import AddNewUserDrawer from '@/views/apps/user/list/AddNewUserDrawer.vue'
 // Firebase composable
 const { updateDocument, getDocuments } = useFirebase()
 
+// Inject refresh function from parent
+const refreshRoleCards = inject('refreshRoleCards', null)
+
 // 👉 Notifications
 const snackbar = ref(false)
 const snackbarText = ref('')
@@ -39,13 +42,21 @@ const assignRole = async roleValue => {
   
   try {
     // Update role in Firestore using UID as document ID
+    // This is a partial update that only modifies the specified fields
     await updateDocument('admin', selectedUser.value.id, { 
       role: roleValue,
       status: 'active', // Activate user when role is assigned
+      assignedDate: new Date(), // Add assignment date
+      assignedBy: 'Current Admin', // Add who assigned the role
     })
 
     // Refetch User
     fetchUsers()
+
+    // Refresh role cards data
+    if (refreshRoleCards) {
+      await refreshRoleCards()
+    }
 
     // Show success notification
     showNotification(`Role assigned successfully!`, 'success')
@@ -147,6 +158,8 @@ const fetchUsers = async () => {
       role: doc.role || null,
       createdAt: doc.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A',
       updatedAt: doc.updatedAt?.toDate?.()?.toLocaleDateString() || 'N/A',
+      assignedDate: doc.assignedDate?.toDate?.()?.toLocaleDateString() || 'N/A',
+      assignedBy: doc.assignedBy || 'N/A',
     }))
     console.log('Fetched users in UserList:', users.value) // Debug log
   } catch (error) {
@@ -173,6 +186,14 @@ const roles = [
 ]
 
 const resolveUserRoleVariant = role => {
+  // Handle null or undefined role
+  if (!role) {
+    return {
+      color: 'warning',
+      icon: 'tabler-user-question',
+    }
+  }
+  
   const roleLowerCase = role.toLowerCase()
   if (roleLowerCase === 'administrator')
     return {
@@ -313,7 +334,7 @@ const deleteUser = async id => {
 
         <!-- 👉 Role -->
         <template #item.role="{ item }">
-          <div class="d-flex align-center gap-x-2">
+          <div class="d-flex align-center justify-center gap-x-2">
             <VIcon
               :size="22"
               :icon="resolveUserRoleVariant(item.role).icon"
@@ -321,67 +342,34 @@ const deleteUser = async id => {
             />
 
             <div class="text-capitalize text-high-emphasis text-body-1">
-              {{ item.role }}
+              {{ item.role || 'No Role' }}
             </div>
           </div>
         </template>
 
         <!-- Assigned Date -->
         <template #item.assignedDate="{ item }">
-          <div class="text-body-1 text-high-emphasis">
+          <div class="text-body-1 text-high-emphasis text-center">
             {{ item.assignedDate || item.createdAt || 'N/A' }}
           </div>
         </template>
 
         <!-- Assigned By -->
         <template #item.assignedBy="{ item }">
-          <div class="text-body-1 text-high-emphasis">
+          <div class="text-body-1 text-high-emphasis text-center">
             {{ item.assignedBy || 'N/A' }}
           </div>
         </template>
 
         <!-- Actions -->
         <template #item.actions="{ item }">
+          <IconBtn @click="showAssignRoleModal(item)">
+            <VIcon icon="tabler-pencil" />
+          </IconBtn>
+
           <IconBtn @click="deleteUser(item.id)">
             <VIcon icon="tabler-trash" />
           </IconBtn>
-
-          <IconBtn>
-            <VIcon icon="tabler-eye" />
-          </IconBtn>
-
-          <VBtn
-            icon
-            variant="text"
-            color="medium-emphasis"
-          >
-            <VIcon icon="tabler-dots-vertical" />
-            <VMenu activator="parent">
-              <VList>
-                <VListItem :to="{ name: 'template-apps-user-view-id', params: { id: item.id } }">
-                  <template #prepend>
-                    <VIcon icon="tabler-eye" />
-                  </template>
-
-                  <VListItemTitle>View</VListItemTitle>
-                </VListItem>
-
-                <VListItem @click="showAssignRoleModal(item)">
-                  <template #prepend>
-                    <VIcon icon="tabler-pencil" />
-                  </template>
-                  <VListItemTitle>Assign Role</VListItemTitle>
-                </VListItem>
-
-                <VListItem @click="deleteUser(item.id)">
-                  <template #prepend>
-                    <VIcon icon="tabler-trash" />
-                  </template>
-                  <VListItemTitle>Delete</VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </VBtn>
         </template>
 
         <template #bottom>

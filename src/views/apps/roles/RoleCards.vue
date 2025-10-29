@@ -1,4 +1,5 @@
 <script setup>
+import { useFirebase } from '@/composables/useFirebase'
 import avatar1 from '@images/avatars/avatar-1.png'
 import avatar2 from '@images/avatars/avatar-2.png'
 import avatar3 from '@images/avatars/avatar-3.png'
@@ -8,7 +9,35 @@ import avatar6 from '@images/avatars/avatar-6.png'
 import avatar7 from '@images/avatars/avatar-7.png'
 import girlUsingMobile from '@images/pages/girl-using-mobile.png'
 
-const roles = ref([
+// Firebase composable
+const { getDocuments } = useFirebase()
+
+// Reactive data
+const adminUsers = ref([])
+const managerUsers = ref([])
+
+// Fetch users from Firestore
+const fetchUsers = async () => {
+  try {
+    const adminDocs = await getDocuments('admin')
+    
+    // Filter users by role
+    adminUsers.value = adminDocs.filter(doc => doc.role === 'administrator')
+    managerUsers.value = adminDocs.filter(doc => doc.role === 'manager')
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  }
+}
+
+// Expose fetchUsers for parent component to refresh data
+defineExpose({
+  refreshData: fetchUsers,
+})
+
+// Initialize data
+await fetchUsers()
+
+const roles = computed(() => [
   {
     role: 'Administrator',
     users: [
@@ -17,6 +46,7 @@ const roles = ref([
       avatar3,
       avatar4,
     ],
+    count: adminUsers.value.length,
     details: {
       name: 'Administrator',
       permissions: [
@@ -52,6 +82,7 @@ const roles = ref([
       avatar6,
       avatar7,
     ],
+    count: managerUsers.value.length,
     details: {
       name: 'Manager',
       permissions: [
@@ -101,34 +132,34 @@ const editPermission = value => {
       <VCard>
         <VCardText class="d-flex align-center pb-4">
           <div class="text-body-1">
-            Total {{ item.users.length }} users
+            Total {{ item.count }} users
           </div>
 
           <VSpacer />
 
           <div class="v-avatar-group">
             <template
-              v-for="(user, index) in item.users"
+              v-for="(user, index) in item.users.slice(0, Math.min(4, item.count))"
               :key="user"
             >
               <VAvatar
-                v-if="item.users.length > 4 && item.users.length !== 4 && index < 3"
+                v-if="item.count > 4 && index < 3"
                 size="40"
                 :image="user"
               />
 
               <VAvatar
-                v-if="item.users.length === 4"
+                v-if="item.count <= 4"
                 size="40"
                 :image="user"
               />
             </template>
             <VAvatar
-              v-if="item.users.length > 4"
+              v-if="item.count > 4"
               :color="$vuetify.theme.current.dark ? '#373B50' : '#EEEDF0'"
             >
               <span>
-                +{{ item.users.length - 3 }}
+                +{{ item.count - 3 }}
               </span>
             </VAvatar>
           </div>
@@ -176,23 +207,23 @@ const editPermission = value => {
         >
           <VCol
             cols="5"
-            class="d-flex flex-column justify-end align-center mt-5"
+            class="d-flex flex-column justify-end align-center mt-2"
           >
             <img
-              width="85"
+              width="60"
               :src="girlUsingMobile"
             >
           </VCol>
 
           <VCol cols="7">
-            <VCardText class="d-flex flex-column align-end justify-end gap-4">
+            <VCardText class="d-flex flex-column align-end justify-end gap-2">
               <VBtn
                 size="small"
                 @click="isAddRoleDialogVisible = true"
               >
                 Add New Role
               </VBtn>
-              <div class="text-end">
+              <div class="text-end text-caption">
                 Add new role,<br> if it doesn't exist.
               </div>
             </VCardText>

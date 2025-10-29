@@ -1,6 +1,20 @@
 <script setup>
 import RoleCards from '@/views/apps/roles/RoleCards.vue'
 import UserList from '@/views/apps/roles/UserList.vue'
+
+// Refs for components
+const roleCardsRef = ref()
+const userListRef = ref()
+
+// Function to refresh role cards when role is assigned
+const refreshRoleCards = async () => {
+  if (roleCardsRef.value) {
+    await roleCardsRef.value.refreshData()
+  }
+}
+
+// Expose refresh function to UserList
+provide('refreshRoleCards', refreshRoleCards)
 </script>
 
 <template>
@@ -16,7 +30,7 @@ import UserList from '@/views/apps/roles/UserList.vue'
 
     <!-- 👉 Roles Cards -->
     <VCol cols="12">
-      <RoleCards />
+      <RoleCards ref="roleCardsRef" />
     </VCol>
 
     <VCol cols="12">

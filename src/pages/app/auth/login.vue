@@ -1,4 +1,5 @@
 <script setup>
+import { useAuth } from '@/composables/useAuth'
 import authV1BottomShape from '@images/svg/auth-v1-bottom-shape.svg?raw'
 import authV1TopShape from '@images/svg/auth-v1-top-shape.svg?raw'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
@@ -11,6 +12,10 @@ definePage({
   },
 })
 
+// Auth + Router
+const { login } = useAuth()
+const router = useRouter()
+
 const form = ref({
   email: '',
   password: '',
@@ -18,6 +23,25 @@ const form = ref({
 })
 
 const isPasswordVisible = ref(false)
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+// Login function
+const handleLogin = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+  
+  const result = await login(form.value.email, form.value.password)
+  
+  if (result.success) {
+    // Redirect after successful login
+    await router.push('/admin/admin-dashboard')
+  } else {
+    errorMessage.value = result.error
+  }
+  
+  isLoading.value = false
+}
 </script>
 
 <template>
@@ -61,16 +85,17 @@ const isPasswordVisible = ref(false)
         </VCardText>
 
         <VCardText>
-          <VForm @submit.prevent="() => {}">
+          <VForm @submit.prevent="handleLogin">
             <VRow>
               <!-- email -->
               <VCol cols="12">
                 <AppTextField
                   v-model="form.email"
                   autofocus
-                  label="Email or Username"
+                  label="Email"
                   type="email"
-                  placeholder="johndoe@email.com"
+                  placeholder="admin@yaadha.com"
+                  :rules="[requiredValidator, emailValidator]"
                 />
               </VCol>
 
@@ -82,6 +107,7 @@ const isPasswordVisible = ref(false)
                   placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+                  :rules="[requiredValidator]"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
 
@@ -93,12 +119,24 @@ const isPasswordVisible = ref(false)
                   />
                 </div>
 
+                <!-- Error display -->
+                <VAlert
+                  v-if="errorMessage"
+                  type="error"
+                  variant="tonal"
+                  class="mb-4"
+                >
+                  {{ errorMessage }}
+                </VAlert>
+
                 <!-- login button -->
                 <VBtn
                   block
                   type="submit"
+                  :loading="isLoading"
+                  :disabled="isLoading"
                 >
-                  Login
+                  {{ isLoading ? 'Signing in...' : 'Login' }}
                 </VBtn>
               </VCol>
             </VRow>

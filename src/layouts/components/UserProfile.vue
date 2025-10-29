@@ -1,11 +1,11 @@
 <script setup>
-import { useFirebase } from '@/composables/useFirebase'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
 const ability = useAbility()
 
-// Firebase composable
-const { currentUser, signOut } = useFirebase()
+// Auth composable
+const { currentUser, logout } = useAuth()
 
 // Get user data from Firebase Auth
 const userData = computed(() => {
@@ -22,31 +22,8 @@ const userData = computed(() => {
   return null
 })
 
-const logout = async () => {
-  try {
-    // Sign out from Firebase Auth
-    await signOut()
-
-    // Remove "accessToken" from cookie
-    useCookie('accessToken').value = null
-
-    // Remove "userData" from cookie
-    useCookie('userData').value = null
-
-    // Remove "userAbilities" from cookie
-    useCookie('userAbilityRules').value = null
-
-    // Reset ability to initial ability
-    ability.update([])
-
-    // Redirect to login page
-    await router.push('/login')
-  } catch (error) {
-    console.error('Error during logout:', error)
-
-    // Still redirect to login even if there's an error
-    await router.push('/login')
-  }
+const handleLogout = async () => {
+  await logout()
 }
 
 const userProfileList = [
@@ -174,7 +151,7 @@ const userProfileList = [
               size="small"
               color="error"
               append-icon="tabler-logout"
-              @click="logout"
+              @click="handleLogout"
             >
               Logout
             </VBtn>

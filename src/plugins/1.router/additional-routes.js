@@ -7,14 +7,27 @@ export const redirects = [
   {
     path: '/',
     name: 'index',
-    redirect: to => {
-      // TODO: Get type from backend
-      const userData = useCookie('userData')
-      const userRole = userData.value?.role
-      if (userRole === 'admin')
-        return { name: 'dashboard-dashboard' }
-      if (userRole === 'client')
-        return { name: 'template-access-control' }
+    redirect: async to => {
+      // Get user from Firebase Auth
+      const { useAuth } = await import('@/composables/useAuth')
+      const { isAuthenticated, getUserData } = useAuth()
+      
+      if (isAuthenticated.value) {
+        try {
+          const userData = await getUserData()
+          
+          if (userData && userData.role && (userData.role === 'administrator' || userData.role === 'manager')) {
+            return { name: 'admin-admin-dashboard' }
+          }
+          
+          // No role assigned yet, redirect to roles page
+          return { name: 'roles' }
+        } catch (error) {
+          console.error('Error fetching user data:', error)
+          
+          return { name: 'template-login', query: to.query }
+        }
+      }
       
       return { name: 'template-login', query: to.query }
     },
