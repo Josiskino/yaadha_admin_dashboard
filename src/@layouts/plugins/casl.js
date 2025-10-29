@@ -1,3 +1,4 @@
+import { ability } from '@/plugins/casl/ability'
 import { useAbility } from '@casl/vue'
 
 /**
@@ -15,6 +16,10 @@ export const can = (action, subject) => {
   if (!vm)
     return false
   const localCan = vm.proxy && '$can' in vm.proxy
+  
+  // If action or subject is not defined, allow access (for navigation items without permissions)
+  if (!action || !subject)
+    return true
     
   return localCan ? vm.proxy?.$can(action, subject) : true
 }
@@ -34,8 +39,26 @@ export const canViewNavMenuGroup = item => {
   
   return can(item.action, item.subject) && hasAnyVisibleChild
 }
+
+/**
+ * Check if user can navigate to a route
+ * Can be used outside Vue context (e.g., in guards)
+ * Falls back to using ability directly if useAbility() fails
+ */
 export const canNavigate = to => {
-  const ability = useAbility()
+  try {
+    // Try to use useAbility() if in Vue context
+    const caslAbility = useAbility()
     
-  return to.matched.some(route => ability.can(route.meta.action, route.meta.subject))
+    return to.matched.some(route => caslAbility.can(route.meta.action, route.meta.subject))
+  } catch (error) {
+    // Fallback to using ability directly when not in Vue context (e.g., in guards)
+    return to.matched.some(route => {
+      // If route has no meta.action/subject, allow navigation
+      if (!route.meta.action || !route.meta.subject)
+        return true
+      
+      return ability.can(route.meta.action, route.meta.subject)
+    })
+  }
 }

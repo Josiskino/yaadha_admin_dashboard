@@ -1,4 +1,5 @@
 import { useFirebase } from '@/composables/useFirebase'
+import { ability } from '@/plugins/casl/ability'
 import { useRouter } from 'vue-router'
 
 export const useAuth = () => {
@@ -39,6 +40,15 @@ export const useAuth = () => {
           avatar: userData.avatar,
         }
         
+        // Initialize CASL abilities based on role
+        // For admin roles, allow all actions
+        const abilityRules = userData.role === 'administrator' || userData.role === 'manager'
+          ? [{ action: 'manage', subject: 'all' }]
+          : []
+        
+        useCookie('userAbilityRules').value = abilityRules
+        ability.update(abilityRules)
+        
         return { success: true, userData }
       } else {
         throw new Error('User not found in admin database')
@@ -59,6 +69,9 @@ export const useAuth = () => {
       useCookie('accessToken').value = null
       useCookie('userData').value = null
       useCookie('userAbilityRules').value = null
+      
+      // Reset CASL abilities
+      ability.update([])
       
       // Redirect to login
       await router.push('/auth/login')

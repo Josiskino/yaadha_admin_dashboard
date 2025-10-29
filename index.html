@@ -24,7 +24,7 @@
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>
-  <script src="/firebase-test.js"></script>
+  <!-- firebase-test.js removed in production to avoid stack overflow errors -->
   <script>
     const loaderColor = localStorage.getItem('vuexy-initial-loader-bg') || '#FFFFFF'
     const primaryColor = localStorage.getItem('vuexy-initial-loader-color') || '#7367F0'

@@ -34,8 +34,8 @@ const handleLogin = async () => {
   const result = await login(form.value.email, form.value.password)
   
   if (result.success) {
-    // Redirect after successful login
-    await router.push('/admin/admin-dashboard')
+    // Redirect after successful login to main dashboard
+    await router.replace({ name: 'dashboard-dashboard' })
   } else {
     errorMessage.value = result.error
   }

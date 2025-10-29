@@ -7,29 +7,9 @@ export const redirects = [
   {
     path: '/',
     name: 'index',
-    redirect: async to => {
-      // Get user from Firebase Auth
-      const { useAuth } = await import('@/composables/useAuth')
-      const { isAuthenticated, getUserData } = useAuth()
-      
-      if (isAuthenticated.value) {
-        try {
-          const userData = await getUserData()
-          
-          if (userData && userData.role && (userData.role === 'administrator' || userData.role === 'manager')) {
-            return { name: 'admin-admin-dashboard' }
-          }
-          
-          // No role assigned yet, redirect to roles page
-          return { name: 'roles' }
-        } catch (error) {
-          console.error('Error fetching user data:', error)
-          
-          return { name: 'template-login', query: to.query }
-        }
-      }
-      
-      return { name: 'template-login', query: to.query }
+    redirect: to => {
+      // Simple redirect to login - the guards will handle authenticated users
+      return { name: 'auth-login', query: to.query }
     },
   },
   {

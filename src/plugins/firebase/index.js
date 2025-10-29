@@ -1,4 +1,7 @@
 import { analytics, auth, db, storage } from '@/config/firebase'
+import { ability } from '@/plugins/casl/ability'
+import { onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
 
 // Define a Vue plugin object
 const FirebasePlugin = {
@@ -14,6 +17,44 @@ const FirebasePlugin = {
     app.provide('$db', db)
     app.provide('$storage', storage)
     app.provide('$analytics', analytics)
+    
+    // Restore CASL abilities if user is already logged in
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        try {
+          // Check if abilities are already set in cookie
+          const existingRules = useCookie('userAbilityRules').value
+          if (existingRules && existingRules.length > 0) {
+            ability.update(existingRules)
+            
+            return
+          }
+          
+          // If not, fetch user data and initialize abilities
+          const userDoc = await getDoc(doc(db, 'admin', user.uid))
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data()
+            
+            if (userData && userData.role) {
+              // Initialize CASL abilities based on role
+              const abilityRules = userData.role === 'administrator' || userData.role === 'manager'
+                ? [{ action: 'manage', subject: 'all' }]
+                : []
+              
+              useCookie('userAbilityRules').value = abilityRules
+              ability.update(abilityRules)
+            }
+          }
+        } catch (error) {
+          console.error('Error restoring CASL abilities:', error)
+        }
+      } else {
+        // User logged out, clear abilities
+        useCookie('userAbilityRules').value = null
+        ability.update([])
+      }
+    })
   },
 }
 
