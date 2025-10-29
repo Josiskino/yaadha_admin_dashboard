@@ -1,4 +1,7 @@
 <script setup>
+import { useFirebase } from '@/composables/useFirebase'
+import { db } from '@/config/firebase'
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -12,6 +15,9 @@ const emit = defineEmits([
   'update:isDrawerOpen',
   'userData',
 ])
+
+// Firebase composable
+const { signUp, loading: firebaseLoading, error: firebaseError } = useFirebase()
 
 const isFormValid = ref(false)
 const refForm = ref()
@@ -118,20 +124,46 @@ const closeNavigationDrawer = () => {
   })
 }
 
-const onSubmit = () => {
-  refForm.value?.validate().then(({ valid }) => {
-    if (valid) {
+const onSubmit = async () => {
+  const isValid = await refForm.value?.validate()
+  
+  if (isValid?.valid) {
+    try {
+      // 1. Create Firebase Auth account
+      const userCredential = await signUp(email.value, password.value)
+      
+      // 2. Create admin document in Firestore
+      const adminData = {
+        email: email.value,
+        fullName: fullName.value,
+        country: country.value,
+        contact: contact.value,
+        status: status.value,
+        createdAt: serverTimestamp(), // Use Firestore server timestamp
+        updatedAt: serverTimestamp(),
+
+        // No role assigned initially
+      }
+      
+      // Use Firebase UID as document ID with setDoc directly
+      const docRef = doc(db, 'admin', userCredential.user.uid)
+
+      await setDoc(docRef, adminData)
+      
+      // 3. Emit success event with Firebase data
       emit('userData', {
-        id: 0,
+        id: userCredential.user.uid,
+        uid: userCredential.user.uid,
         fullName: fullName.value,
         country: country.value,
         contact: contact.value,
         email: email.value,
-        password: password.value,
         status: status.value,
         avatar: '',
         billing: 'Auto Debit',
       })
+      
+      // 4. Close drawer and reset form
       emit('update:isDrawerOpen', false)
       nextTick(() => {
         password.value = 'yaadhapassword'
@@ -141,8 +173,16 @@ const onSubmit = () => {
         refForm.value?.reset()
         refForm.value?.resetValidation()
       })
+      
+    } catch (error) {
+      console.error('Error creating admin account:', error)
+
+      // Handle error - could emit error event or show notification
+      emit('userData', {
+        error: error.message,
+      })
     }
-  })
+  }
 }
 
 const handleDrawerModelValueUpdate = val => {
@@ -280,17 +320,35 @@ const handleDrawerModelValueUpdate = val => {
                 <VBtn
                   type="submit"
                   class="me-3"
+                  :loading="firebaseLoading"
+                  :disabled="firebaseLoading"
                 >
-                  Submit
+                  {{ firebaseLoading ? 'Creating Account...' : 'Submit' }}
                 </VBtn>
                 <VBtn
                   type="reset"
                   variant="tonal"
                   color="error"
+                  :disabled="firebaseLoading"
                   @click="closeNavigationDrawer"
                 >
                   Cancel
                 </VBtn>
+              </VCol>
+
+              <!-- 👉 Error Display -->
+              <VCol
+                v-if="firebaseError"
+                cols="12"
+              >
+                <VAlert
+                  type="error"
+                  variant="tonal"
+                  closable
+                  @click:close="firebaseError = null"
+                >
+                  {{ firebaseError }}
+                </VAlert>
               </VCol>
             </VRow>
           </VForm>

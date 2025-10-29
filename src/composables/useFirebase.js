@@ -31,6 +31,7 @@ export function useFirebase() {
 
   // Listen to auth state changes
   onAuthStateChanged(auth, user => {
+    console.log('Auth state changed:', user) // Debug log
     currentUser.value = user
   })
 

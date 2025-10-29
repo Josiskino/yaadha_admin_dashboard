@@ -1,4 +1,5 @@
 <script setup>
+import { useFirebase } from '@/composables/useFirebase'
 import AddNewUserDrawer from '@/views/apps/user/list/AddNewUserDrawer.vue'
 
 // 👉 Notifications
@@ -34,7 +35,8 @@ const confirmDelete = async () => {
   if (!userToDelete.value) return
   
   try {
-    await $api(`/apps/users/${ userToDelete.value }`, { method: 'DELETE' })
+    // Delete from Firestore using UID as document ID
+    await deleteDocument('admin', userToDelete.value)
 
     // Delete from selectedRows
     const index = selectedRows.value.findIndex(row => row === userToDelete.value)
@@ -101,22 +103,42 @@ const headers = [
   },
 ]
 
-const {
-  data: usersData,
-  execute: fetchUsers,
-} = await useApi(createUrl('/apps/users', {
-  query: {
-    q: searchQuery,
-    role: selectedRole,
-    itemsPerPage,
-    page,
-    sortBy,
-    orderBy,
-  },
-}))
+// Firebase composable
+const { getDocuments, deleteDocument, getDocument, loading: firebaseLoading } = useFirebase()
 
-const users = computed(() => usersData.value.users)
-const totalUsers = computed(() => usersData.value.totalUsers)
+// Reactive data
+const users = ref([])
+const totalUsers = ref(0)
+
+// Fetch users from Firestore
+const fetchUsers = async () => {
+  try {
+    const adminDocs = await getDocuments('admin')
+    
+    // Transform data to match expected format
+    users.value = adminDocs.map(doc => ({
+      id: doc.id, // This is the UID
+      uid: doc.id, // Same as id for compatibility
+      fullName: doc.fullName || 'N/A',
+      email: doc.email || 'N/A',
+      country: doc.country || 'N/A',
+      contact: doc.contact || 'N/A',
+      status: doc.status || 'pending',
+      role: doc.role || null,
+      createdAt: doc.createdAt ? (doc.createdAt.toDate ? doc.createdAt.toDate().toLocaleDateString() : new Date(doc.createdAt).toLocaleDateString()) : 'N/A',
+      updatedAt: doc.updatedAt ? (doc.updatedAt.toDate ? doc.updatedAt.toDate().toLocaleDateString() : new Date(doc.updatedAt).toLocaleDateString()) : 'N/A',
+    }))
+    
+    totalUsers.value = adminDocs.length
+    console.log('Fetched users:', users.value) // Debug log
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    showNotification('Error fetching admin accounts', 'error')
+  }
+}
+
+// Initialize data
+await fetchUsers()
 
 // 👉 search filters
 const roles = [
@@ -154,16 +176,17 @@ const isAddNewUserDrawerVisible = ref(false)
 
 const addNewUser = async userData => {
   try {
-    await $api('/apps/users', {
-      method: 'POST',
-      body: userData,
-    })
+    // Check if there's an error from Firebase
+    if (userData.error) {
+      showNotification(`Error creating admin: ${userData.error}`, 'error')
 
-    // Refetch User
+      return
+    }
+
+    // Firebase account and Firestore document already created
+    // Just refetch users and show success notification
     fetchUsers()
-
-    // Show success notification
-    showNotification('Admin created successfully!', 'success')
+    showNotification('Admin account created successfully!', 'success')
   } catch (error) {
     console.error('Error creating admin:', error)
     showNotification('Error creating admin', 'error')
@@ -265,7 +288,7 @@ const deleteUser = async id => {
         <!-- Full Name -->
         <template #item.fullName="{ item }">
           <div class="text-body-1 text-high-emphasis">
-            {{ `${item.firstName || ''} ${item.name || item.lastName || ''}`.trim() }}
+            {{ item.fullName || 'N/A' }}
           </div>
         </template>
 
@@ -279,7 +302,7 @@ const deleteUser = async id => {
         <!-- Phone -->
         <template #item.phone="{ item }">
           <div class="text-body-1 text-high-emphasis">
-            {{ item.phone }}
+            {{ item.contact || 'N/A' }}
           </div>
         </template>
 

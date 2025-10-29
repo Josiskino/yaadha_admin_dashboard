@@ -1,5 +1,9 @@
 <script setup>
+import { useFirebase } from '@/composables/useFirebase'
 import AddNewUserDrawer from '@/views/apps/user/list/AddNewUserDrawer.vue'
+
+// Firebase composable
+const { updateDocument, getDocuments } = useFirebase()
 
 // 👉 Notifications
 const snackbar = ref(false)
@@ -34,9 +38,10 @@ const assignRole = async roleValue => {
   if (!selectedUser.value) return
   
   try {
-    await $api(`/apps/users/${ selectedUser.value.id }`, {
-      method: 'PATCH',
-      body: { role: roleValue },
+    // Update role in Firestore using UID as document ID
+    await updateDocument('admin', selectedUser.value.id, { 
+      role: roleValue,
+      status: 'active', // Activate user when role is assigned
     })
 
     // Refetch User
@@ -122,22 +127,38 @@ const headers = [
   },
 ]
 
-const {
-  data: usersData,
-  execute: fetchUsers,
-} = await useApi(createUrl('/apps/users', {
-  query: {
-    q: searchQuery,
-    role: selectedRole,
-    itemsPerPage,
-    page,
-    sortBy,
-    orderBy,
-  },
-}))
+// Reactive data
+const users = ref([])
 
-const users = computed(() => usersData.value?.users || [])
-const totalUsers = computed(() => usersData.value?.totalUsers || 0)
+// Fetch users from Firestore
+const fetchUsers = async () => {
+  try {
+    const adminDocs = await getDocuments('admin')
+    
+    // Transform data to match expected format
+    users.value = adminDocs.map(doc => ({
+      id: doc.id, // This is the UID
+      uid: doc.id, // Same as id for compatibility
+      fullName: doc.fullName || 'N/A',
+      email: doc.email || 'N/A',
+      country: doc.country || 'N/A',
+      contact: doc.contact || 'N/A',
+      status: doc.status || 'pending',
+      role: doc.role || null,
+      createdAt: doc.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A',
+      updatedAt: doc.updatedAt?.toDate?.()?.toLocaleDateString() || 'N/A',
+    }))
+    console.log('Fetched users in UserList:', users.value) // Debug log
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    showNotification('Error fetching admin accounts', 'error')
+  }
+}
+
+// Initialize data
+await fetchUsers()
+
+const totalUsers = computed(() => users.value.length)
 
 // 👉 search filters
 const roles = [
