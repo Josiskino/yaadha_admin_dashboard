@@ -1,11 +1,89 @@
 <script setup>
 import AddNewUserDrawer from '@/views/apps/user/list/AddNewUserDrawer.vue'
 
+// 👉 Notifications
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
+
+const showNotification = (message, type = 'success') => {
+  snackbarText.value = message
+  snackbarColor.value = type
+  snackbar.value = true
+}
+
+// 👉 Delete Confirmation Modal
+const isDeleteModalVisible = ref(false)
+const userToDelete = ref(null)
+
+const showDeleteConfirmation = userId => {
+  userToDelete.value = userId
+  isDeleteModalVisible.value = true
+}
+
+// 👉 Assign Role Modal
+const isAssignRoleModalVisible = ref(false)
+const selectedUser = ref(null)
+
+const showAssignRoleModal = user => {
+  selectedUser.value = user
+  isAssignRoleModalVisible.value = true
+}
+
+const assignRole = async roleValue => {
+  if (!selectedUser.value) return
+  
+  try {
+    await $api(`/apps/users/${ selectedUser.value.id }`, {
+      method: 'PATCH',
+      body: { role: roleValue },
+    })
+
+    // Refetch User
+    fetchUsers()
+
+    // Show success notification
+    showNotification(`Role assigned successfully!`, 'success')
+    
+    // Close modal
+    isAssignRoleModalVisible.value = false
+    selectedUser.value = null
+  } catch (error) {
+    console.error('Error assigning role:', error)
+    showNotification('Error assigning role', 'error')
+  }
+}
+
+const confirmDelete = async () => {
+  if (!userToDelete.value) return
+  
+  try {
+    await $api(`/apps/users/${ userToDelete.value }`, { method: 'DELETE' })
+
+    // Delete from selectedRows
+    const index = selectedRows.value.findIndex(row => row === userToDelete.value)
+    
+    if (index !== -1)
+      selectedRows.value.splice(index, 1)
+
+    // Refetch User
+    fetchUsers()
+
+    // Show success notification
+    showNotification('User deleted successfully!', 'success')
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    showNotification('Error deleting user', 'error')
+  } finally {
+    // Close modal
+    isDeleteModalVisible.value = false
+    userToDelete.value = null
+  }
+}
+
 // 👉 Store
 const searchQuery = ref('')
 const selectedRole = ref()
-const selectedPlan = ref()
-const selectedStatus = ref()
 
 // Data table options
 const itemsPerPage = ref(10)
@@ -30,16 +108,12 @@ const headers = [
     key: 'role',
   },
   {
-    title: 'Plan',
-    key: 'plan',
+    title: 'Assigned Date',
+    key: 'assignedDate',
   },
   {
-    title: 'Billing',
-    key: 'billing',
-  },
-  {
-    title: 'Status',
-    key: 'status',
+    title: 'Assigned By',
+    key: 'assignedBy',
   },
   {
     title: 'Actions',
@@ -54,8 +128,6 @@ const {
 } = await useApi(createUrl('/apps/users', {
   query: {
     q: searchQuery,
-    status: selectedStatus,
-    plan: selectedPlan,
     role: selectedRole,
     itemsPerPage,
     page,
@@ -70,53 +142,26 @@ const totalUsers = computed(() => usersData.value?.totalUsers || 0)
 // 👉 search filters
 const roles = [
   {
-    title: 'Admin',
-    value: 'admin',
+    title: 'Administrator',
+    value: 'administrator',
   },
   {
-    title: 'Author',
-    value: 'author',
-  },
-  {
-    title: 'Editor',
-    value: 'editor',
-  },
-  {
-    title: 'Maintainer',
-    value: 'maintainer',
-  },
-  {
-    title: 'Subscriber',
-    value: 'subscriber',
+    title: 'Manager',
+    value: 'manager',
   },
 ]
 
 const resolveUserRoleVariant = role => {
   const roleLowerCase = role.toLowerCase()
-  if (roleLowerCase === 'subscriber')
-    return {
-      color: 'primary',
-      icon: 'tabler-user',
-    }
-  if (roleLowerCase === 'author')
-    return {
-      color: 'warning',
-      icon: 'tabler-settings',
-    }
-  if (roleLowerCase === 'maintainer')
-    return {
-      color: 'success',
-      icon: 'tabler-chart-donut',
-    }
-  if (roleLowerCase === 'editor')
-    return {
-      color: 'info',
-      icon: 'tabler-pencil',
-    }
-  if (roleLowerCase === 'admin')
+  if (roleLowerCase === 'administrator')
     return {
       color: 'error',
-      icon: 'tabler-device-laptop',
+      icon: 'tabler-crown',
+    }
+  if (roleLowerCase === 'manager')
+    return {
+      color: 'success',
+      icon: 'tabler-user-star',
     }
   
   return {
@@ -125,40 +170,29 @@ const resolveUserRoleVariant = role => {
   }
 }
 
-const resolveUserStatusVariant = stat => {
-  const statLowerCase = stat.toLowerCase()
-  if (statLowerCase === 'pending')
-    return 'warning'
-  if (statLowerCase === 'active')
-    return 'success'
-  if (statLowerCase === 'inactive')
-    return 'secondary'
-  
-  return 'primary'
-}
 
 const isAddNewUserDrawerVisible = ref(false)
 
 const addNewUser = async userData => {
-  await $api('/apps/users', {
-    method: 'POST',
-    body: userData,
-  })
+  try {
+    await $api('/apps/users', {
+      method: 'POST',
+      body: userData,
+    })
 
-  // refetch User
-  fetchUsers()
+    // Refetch User
+    fetchUsers()
+
+    // Show success notification
+    showNotification('User created successfully!', 'success')
+  } catch (error) {
+    console.error('Error creating user:', error)
+    showNotification('Error creating user', 'error')
+  }
 }
 
 const deleteUser = async id => {
-  await $api(`/apps/users/${ id }`, { method: 'DELETE' })
-
-  // Delete from selectedRows
-  const index = selectedRows.value.findIndex(row => row === id)
-  if (index !== -1)
-    selectedRows.value.splice(index, 1)
-
-  // refetch User
-  fetchUsers()
+  showDeleteConfirmation(id)
 }
 </script>
 
@@ -194,14 +228,14 @@ const deleteUser = async id => {
             style="inline-size: 15.625rem;"
           />
 
-          <!-- 👉 Add user button -->
+          <!-- 👉 Role filter -->
           <AppSelect
             v-model="selectedRole"
-            placeholder="Select Role"
+            placeholder="Filter by Role"
             :items="roles"
             clearable
             clear-icon="tabler-x"
-            style="inline-size: 10rem;"
+            style="inline-size: 12rem;"
           />
         </div>
       </VCardText>
@@ -271,23 +305,18 @@ const deleteUser = async id => {
           </div>
         </template>
 
-        <!-- Plan -->
-        <template #item.plan="{ item }">
-          <div class="text-body-1 text-high-emphasis text-capitalize">
-            {{ item.currentPlan }}
+        <!-- Assigned Date -->
+        <template #item.assignedDate="{ item }">
+          <div class="text-body-1 text-high-emphasis">
+            {{ item.assignedDate || item.createdAt || 'N/A' }}
           </div>
         </template>
 
-        <!-- Status -->
-        <template #item.status="{ item }">
-          <VChip
-            :color="resolveUserStatusVariant(item.status)"
-            size="small"
-            label
-            class="text-capitalize"
-          >
-            {{ item.status }}
-          </VChip>
+        <!-- Assigned By -->
+        <template #item.assignedBy="{ item }">
+          <div class="text-body-1 text-high-emphasis">
+            {{ item.assignedBy || 'N/A' }}
+          </div>
         </template>
 
         <!-- Actions -->
@@ -316,11 +345,11 @@ const deleteUser = async id => {
                   <VListItemTitle>View</VListItemTitle>
                 </VListItem>
 
-                <VListItem link>
+                <VListItem @click="showAssignRoleModal(item)">
                   <template #prepend>
                     <VIcon icon="tabler-pencil" />
                   </template>
-                  <VListItemTitle>Edit</VListItemTitle>
+                  <VListItemTitle>Assign Role</VListItemTitle>
                 </VListItem>
 
                 <VListItem @click="deleteUser(item.id)">
@@ -350,6 +379,135 @@ const deleteUser = async id => {
       v-model:isDrawerOpen="isAddNewUserDrawerVisible"
       @user-data="addNewUser"
     />
+
+    <!-- 👉 Notification Snackbar -->
+    <VSnackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      timeout="3000"
+      location="top right"
+    >
+      {{ snackbarText }}
+    </VSnackbar>
+
+    <!-- 👉 Assign Role Modal -->
+    <VDialog
+      v-model="isAssignRoleModalVisible"
+      max-width="600"
+    >
+      <VCard v-if="selectedUser">
+        <VCardTitle class="d-flex align-center">
+          <VIcon
+            icon="tabler-user-plus"
+            color="primary"
+            class="me-3"
+          />
+          Assign Role to {{ selectedUser.fullName }}
+        </VCardTitle>
+
+        <VDivider />
+
+        <VCardText>
+          <div class="mb-4">
+            <p class="text-body-1 mb-2">
+              Select a role to assign to this user:
+            </p>
+          </div>
+
+          <VRow>
+            <VCol
+              v-for="role in roles"
+              :key="role.value"
+              cols="12"
+              md="6"
+            >
+              <VCard
+                variant="outlined"
+                class="cursor-pointer role-card"
+                :class="{ 'border-primary': selectedUser.role === role.value }"
+                @click="assignRole(role.value)"
+              >
+                <VCardText class="d-flex align-center h-100">
+                  <VIcon
+                    :icon="resolveUserRoleVariant(role.value).icon"
+                    :color="resolveUserRoleVariant(role.value).color"
+                    size="24"
+                    class="me-3"
+                  />
+                  <div class="flex-grow-1">
+                    <div class="text-h6 mb-1">
+                      {{ role.title }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis text-truncate">
+                      {{ role.value === 'administrator' ? 'Full access to all features' : 'Limited access to specific features' }}
+                    </div>
+                  </div>
+                </VCardText>
+              </VCard>
+            </VCol>
+          </VRow>
+        </VCardText>
+
+        <VDivider />
+
+        <VCardActions class="justify-end">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isAssignRoleModalVisible = false"
+          >
+            Cancel
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- 👉 Delete Confirmation Modal -->
+    <VDialog
+      v-model="isDeleteModalVisible"
+      max-width="500"
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center">
+          <VIcon
+            icon="tabler-alert-triangle"
+            color="warning"
+            class="me-3"
+          />
+          Confirm Deletion
+        </VCardTitle>
+
+        <VCardText>
+          <p class="text-base mb-4">
+            Are you sure you want to delete this user?
+          </p>
+          <p class="text-sm text-medium-emphasis">
+            This action is irreversible and will permanently delete the user account.
+          </p>
+        </VCardText>
+
+        <VCardActions class="justify-end">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDeleteModalVisible = false"
+          >
+            Cancel
+          </VBtn>
+          <VBtn
+            color="error"
+            variant="flat"
+            @click="confirmDelete"
+          >
+            <VIcon
+              icon="tabler-trash"
+              class="me-2"
+            />
+            Delete
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </section>
 </template>
 
@@ -360,5 +518,17 @@ const deleteUser = async id => {
 
 .user-list-name:not(:hover) {
   color: rgba(var(--v-theme-on-background), var(--v-medium-emphasis-opacity));
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.role-card {
+  block-size: 100%;
+}
+
+.role-card .v-card-text {
+  block-size: 100%;
 }
 </style>

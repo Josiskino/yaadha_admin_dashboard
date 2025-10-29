@@ -18,17 +18,101 @@ const refForm = ref()
 const fullName = ref('')
 const userName = ref('')
 const email = ref('')
-const company = ref('')
+const password = ref('yaadhapassword')
+const showPassword = ref(true)
 const country = ref()
 const contact = ref('')
-const role = ref()
-const plan = ref()
-const status = ref()
+const status = ref('pending')
+const countrySearch = ref('')
+
+// Countries list with flags
+const countries = ref([
+  { title: 'Afghanistan', value: 'af', flag: '🇦🇫' },
+  { title: 'Albania', value: 'al', flag: '🇦🇱' },
+  { title: 'Algeria', value: 'dz', flag: '🇩🇿' },
+  { title: 'Argentina', value: 'ar', flag: '🇦🇷' },
+  { title: 'Australia', value: 'au', flag: '🇦🇺' },
+  { title: 'Austria', value: 'at', flag: '🇦🇹' },
+  { title: 'Bangladesh', value: 'bd', flag: '🇧🇩' },
+  { title: 'Belgium', value: 'be', flag: '🇧🇪' },
+  { title: 'Brazil', value: 'br', flag: '🇧🇷' },
+  { title: 'Bulgaria', value: 'bg', flag: '🇧🇬' },
+  { title: 'Canada', value: 'ca', flag: '🇨🇦' },
+  { title: 'Chile', value: 'cl', flag: '🇨🇱' },
+  { title: 'China', value: 'cn', flag: '🇨🇳' },
+  { title: 'Colombia', value: 'co', flag: '🇨🇴' },
+  { title: 'Croatia', value: 'hr', flag: '🇭🇷' },
+  { title: 'Czech Republic', value: 'cz', flag: '🇨🇿' },
+  { title: 'Denmark', value: 'dk', flag: '🇩🇰' },
+  { title: 'Egypt', value: 'eg', flag: '🇪🇬' },
+  { title: 'Estonia', value: 'ee', flag: '🇪🇪' },
+  { title: 'Finland', value: 'fi', flag: '🇫🇮' },
+  { title: 'France', value: 'fr', flag: '🇫🇷' },
+  { title: 'Germany', value: 'de', flag: '🇩🇪' },
+  { title: 'Ghana', value: 'gh', flag: '🇬🇭' },
+  { title: 'Greece', value: 'gr', flag: '🇬🇷' },
+  { title: 'Hungary', value: 'hu', flag: '🇭🇺' },
+  { title: 'Iceland', value: 'is', flag: '🇮🇸' },
+  { title: 'India', value: 'in', flag: '🇮🇳' },
+  { title: 'Indonesia', value: 'id', flag: '🇮🇩' },
+  { title: 'Ireland', value: 'ie', flag: '🇮🇪' },
+  { title: 'Israel', value: 'il', flag: '🇮🇱' },
+  { title: 'Italy', value: 'it', flag: '🇮🇹' },
+  { title: 'Japan', value: 'jp', flag: '🇯🇵' },
+  { title: 'Kenya', value: 'ke', flag: '🇰🇪' },
+  { title: 'Latvia', value: 'lv', flag: '🇱🇻' },
+  { title: 'Lithuania', value: 'lt', flag: '🇱🇹' },
+  { title: 'Luxembourg', value: 'lu', flag: '🇱🇺' },
+  { title: 'Malaysia', value: 'my', flag: '🇲🇾' },
+  { title: 'Mexico', value: 'mx', flag: '🇲🇽' },
+  { title: 'Morocco', value: 'ma', flag: '🇲🇦' },
+  { title: 'Netherlands', value: 'nl', flag: '🇳🇱' },
+  { title: 'New Zealand', value: 'nz', flag: '🇳🇿' },
+  { title: 'Nigeria', value: 'ng', flag: '🇳🇬' },
+  { title: 'Norway', value: 'no', flag: '🇳🇴' },
+  { title: 'Pakistan', value: 'pk', flag: '🇵🇰' },
+  { title: 'Peru', value: 'pe', flag: '🇵🇪' },
+  { title: 'Philippines', value: 'ph', flag: '🇵🇭' },
+  { title: 'Poland', value: 'pl', flag: '🇵🇱' },
+  { title: 'Portugal', value: 'pt', flag: '🇵🇹' },
+  { title: 'Romania', value: 'ro', flag: '🇷🇴' },
+  { title: 'Russia', value: 'ru', flag: '🇷🇺' },
+  { title: 'Saudi Arabia', value: 'sa', flag: '🇸🇦' },
+  { title: 'Singapore', value: 'sg', flag: '🇸🇬' },
+  { title: 'Slovakia', value: 'sk', flag: '🇸🇰' },
+  { title: 'Slovenia', value: 'si', flag: '🇸🇮' },
+  { title: 'South Africa', value: 'za', flag: '🇿🇦' },
+  { title: 'South Korea', value: 'kr', flag: '🇰🇷' },
+  { title: 'Spain', value: 'es', flag: '🇪🇸' },
+  { title: 'Sweden', value: 'se', flag: '🇸🇪' },
+  { title: 'Switzerland', value: 'ch', flag: '🇨🇭' },
+  { title: 'Thailand', value: 'th', flag: '🇹🇭' },
+  { title: 'Togo', value: 'tg', flag: '🇹🇬' },
+  { title: 'Turkey', value: 'tr', flag: '🇹🇷' },
+  { title: 'Ukraine', value: 'ua', flag: '🇺🇦' },
+  { title: 'United Arab Emirates', value: 'ae', flag: '🇦🇪' },
+  { title: 'United Kingdom', value: 'gb', flag: '🇬🇧' },
+  { title: 'United States', value: 'us', flag: '🇺🇸' },
+  { title: 'Vietnam', value: 'vn', flag: '🇻🇳' },
+])
+
+// Filtered countries based on search
+const filteredCountries = computed(() => {
+  if (!countrySearch.value) return countries.value
+  
+  return countries.value.filter(country => 
+    country.title.toLowerCase().includes(countrySearch.value.toLowerCase()),
+  )
+})
 
 // 👉 drawer close
 const closeNavigationDrawer = () => {
   emit('update:isDrawerOpen', false)
   nextTick(() => {
+    password.value = 'yaadhapassword'
+    showPassword.value = true
+    status.value = 'pending'
+    countrySearch.value = ''
     refForm.value?.reset()
     refForm.value?.resetValidation()
   })
@@ -40,18 +124,20 @@ const onSubmit = () => {
       emit('userData', {
         id: 0,
         fullName: fullName.value,
-        company: company.value,
-        role: role.value,
         country: country.value,
         contact: contact.value,
         email: email.value,
-        currentPlan: plan.value,
+        password: password.value,
         status: status.value,
         avatar: '',
         billing: 'Auto Debit',
       })
       emit('update:isDrawerOpen', false)
       nextTick(() => {
+        password.value = 'yaadhapassword'
+        showPassword.value = true
+        status.value = 'pending'
+        countrySearch.value = ''
         refForm.value?.reset()
         refForm.value?.resetValidation()
       })
@@ -121,25 +207,50 @@ const handleDrawerModelValueUpdate = val => {
                 />
               </VCol>
 
-              <!-- 👉 company -->
+              <!-- 👉 Password -->
               <VCol cols="12">
                 <AppTextField
-                  v-model="company"
+                  v-model="password"
+                  :type="showPassword ? 'password' : 'text'"
                   :rules="[requiredValidator]"
-                  label="Company"
-                  placeholder="PixInvent"
-                />
+                  label="Password"
+                  placeholder="yaadhapassword"
+                >
+                  <template #append-inner>
+                    <IconBtn @click="showPassword = !showPassword">
+                      <VIcon :icon="showPassword ? 'tabler-eye-off' : 'tabler-eye'" />
+                    </IconBtn>
+                  </template>
+                </AppTextField>
               </VCol>
 
               <!-- 👉 Country -->
               <VCol cols="12">
-                <AppSelect
+                <VAutocomplete
                   v-model="country"
                   label="Select Country"
-                  placeholder="Select Country"
+                  placeholder="Search for a country..."
                   :rules="[requiredValidator]"
-                  :items="['USA', 'UK', 'India', 'Australia']"
-                />
+                  :items="filteredCountries"
+                  item-title="title"
+                  item-value="value"
+                  clearable
+                  no-data-text="No countries found"
+                >
+                  <template #item="{ props, item }">
+                    <VListItem v-bind="props">
+                      <template #prepend>
+                        <span class="text-lg me-2">{{ item.raw.flag }}</span>
+                      </template>
+                    </VListItem>
+                  </template>
+                  <template #selection="{ item }">
+                    <div class="d-flex align-center">
+                      <span class="text-lg me-2">{{ countries.find(c => c.value === item.raw.value)?.flag }}</span>
+                      <span>{{ item.raw.title }}</span>
+                    </div>
+                  </template>
+                </VAutocomplete>
               </VCol>
 
               <!-- 👉 Contact -->
@@ -150,28 +261,6 @@ const handleDrawerModelValueUpdate = val => {
                   :rules="[requiredValidator]"
                   label="Contact"
                   placeholder="+1-541-754-3010"
-                />
-              </VCol>
-
-              <!-- 👉 Role -->
-              <VCol cols="12">
-                <AppSelect
-                  v-model="role"
-                  label="Select Role"
-                  placeholder="Select Role"
-                  :rules="[requiredValidator]"
-                  :items="['Admin', 'Author', 'Editor', 'Maintainer', 'Subscriber']"
-                />
-              </VCol>
-
-              <!-- 👉 Plan -->
-              <VCol cols="12">
-                <AppSelect
-                  v-model="plan"
-                  label="Select Plan"
-                  placeholder="Select Plan"
-                  :rules="[requiredValidator]"
-                  :items="['Basic', 'Company', 'Enterprise', 'Team']"
                 />
               </VCol>
 
