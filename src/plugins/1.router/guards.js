@@ -50,20 +50,20 @@ export const setupGuards = router => {
           const userData = userDoc.data()
           
           if (userData && userData.role && (userData.role === 'administrator' || userData.role === 'manager')) {
-            return { name: 'dashboard-dashboard' }
+            return { name: 'categories-categories-dashboard' }
           }
           
           // No role assigned yet, redirect to roles page
           return { name: 'roles' }
         }
         
-        // User not found in admin collection, redirect to dashboard anyway
-        return { name: 'dashboard-dashboard' }
+        // User not found in admin collection, redirect to categories anyway
+        return { name: 'categories-categories-dashboard' }
       } catch (error) {
         console.error('Error fetching user data during login redirect:', error)
         
-        // On error, redirect to dashboard
-        return { name: 'dashboard-dashboard' }
+        // On error, redirect to categories
+        return { name: 'categories-categories-dashboard' }
       }
     }
 
@@ -92,7 +92,7 @@ export const setupGuards = router => {
             const userData = userDoc.data()
             
             if (userData && userData.role && (userData.role === 'administrator' || userData.role === 'manager')) {
-              return { name: 'dashboard-dashboard' }
+              return { name: 'categories-categories-dashboard' }
             }
           }
         } catch (error) {

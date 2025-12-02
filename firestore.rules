@@ -1,22 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Collection OTP - Access restricted to Cloud Functions only (deny client)
+    // Collection OTP - Accès restreint aux Cloud Functions uniquement
     match /otps/{email} {
       allow read, write: if false;
     }
-
-    // Collection users - A user can only read/write their own data
+    
+    // Collection users - L'utilisateur peut seulement lire/écrire ses propres données
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
-
-    // Collection categories - TEMPORARY: Open for development (CHANGE IN PRODUCTION!)
-    match /categories/{categoryId} {
-      allow read, write: if true;
+    
+    // Collection admin - Les utilisateurs authentifiés peuvent créer/lire/mettre à jour les documents admin
+    match /admin/{adminId} {
+      // Permettre aux utilisateurs de créer leur propre document lors de l'inscription
+      allow create: if request.auth != null && request.auth.uid == adminId;
+      // Permettre aux utilisateurs authentifiés de lire tous les documents admin
+      allow read: if request.auth != null;
+      // Permettre aux utilisateurs authentifiés de mettre à jour les documents admin (pour l'assignation de rôles)
+      allow update: if request.auth != null;
+      // Permettre la suppression uniquement pour les utilisateurs authentifiés
+      allow delete: if request.auth != null;
     }
-
-    // Deny any other access by default
+    
+    // Interdire tout autre accès par défaut
     match /{document=**} {
       allow read, write: if false;
     }

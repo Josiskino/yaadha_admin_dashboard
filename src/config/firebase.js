@@ -20,7 +20,8 @@ const app = initializeApp(firebaseConfig)
 
 // Initialize services
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+// Use yaadha-db-dev database instead of (default)
+export const db = getFirestore(app, 'yaadha-db-dev')
 export const storage = getStorage(app)
 export const analytics = getAnalytics(app)
 

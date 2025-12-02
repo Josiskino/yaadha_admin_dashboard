@@ -25,17 +25,25 @@ const form = ref({
 const isPasswordVisible = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const refForm = ref()
 
 // Login function
 const handleLogin = async () => {
+  // Valider le formulaire avant de soumettre
+  const { valid } = await refForm.value?.validate()
+  
+  if (!valid) {
+    return
+  }
+  
   isLoading.value = true
   errorMessage.value = ''
   
   const result = await login(form.value.email, form.value.password)
   
   if (result.success) {
-    // Redirect after successful login to main dashboard
-    await router.replace({ name: 'dashboard-dashboard' })
+    // Redirect after successful login to categories page
+    await router.replace({ name: 'categories-categories-dashboard' })
   } else {
     errorMessage.value = result.error
   }
@@ -85,7 +93,11 @@ const handleLogin = async () => {
         </VCardText>
 
         <VCardText>
-          <VForm @submit.prevent="handleLogin">
+          <VForm 
+            ref="refForm"
+            validate-on="submit"
+            @submit.prevent="handleLogin"
+          >
             <VRow>
               <!-- email -->
               <VCol cols="12">
@@ -96,6 +108,7 @@ const handleLogin = async () => {
                   type="email"
                   placeholder="contact@company.com"
                   :rules="[requiredValidator, emailValidator]"
+                  validate-on="blur"
                 />
               </VCol>
 
@@ -108,6 +121,7 @@ const handleLogin = async () => {
                   :type="isPasswordVisible ? 'text' : 'password'"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
                   :rules="[requiredValidator]"
+                  validate-on="blur"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
 
