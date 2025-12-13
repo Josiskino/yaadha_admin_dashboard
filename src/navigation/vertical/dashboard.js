@@ -23,8 +23,21 @@ export default [
   // },
   {
     title: 'Categories',
-    icon: { icon: 'tabler-files' },
-    to: 'categories-categories-dashboard',
+    icon: { icon: 'tabler-category' },
+    children: [
+      {
+        title: 'Categories',
+        to: 'categories-categories-dashboard',
+      },
+      {
+        title: 'Sub-categories',
+        to: 'categories-subcategories-dashboard',
+      },
+      {
+        title: 'Prestations',
+        to: 'categories-prestations-dashboard',
+      },
+    ],
   },
   {
     title: 'Admin Management',

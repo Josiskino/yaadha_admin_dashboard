@@ -160,7 +160,7 @@ const fetchUsers = async () => {
       updatedAt: doc.updatedAt?.toDate?.()?.toLocaleDateString() || 'N/A',
       assignedDate: doc.assignedDate?.toDate?.()?.toLocaleDateString() || 'N/A',
       assignedBy: doc.assignedBy || 'N/A',
-    }))
+}))
     console.log('Fetched users in UserList:', users.value) // Debug log
   } catch (error) {
     console.error('Error fetching users:', error)
@@ -192,7 +192,7 @@ const resolveUserRoleVariant = role => {
       color: 'warning',
       icon: 'tabler-user-question',
     }
-  }
+    }
   
   const roleLowerCase = role.toLowerCase()
   if (roleLowerCase === 'administrator')
@@ -217,13 +217,13 @@ const isAddNewUserDrawerVisible = ref(false)
 
 const addNewUser = async userData => {
   try {
-    await $api('/apps/users', {
-      method: 'POST',
-      body: userData,
-    })
+  await $api('/apps/users', {
+    method: 'POST',
+    body: userData,
+  })
 
     // Refetch User
-    fetchUsers()
+  fetchUsers()
 
     // Show success notification
     showNotification('User created successfully!', 'success')

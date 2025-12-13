@@ -127,8 +127,8 @@ const fetchUsers = async () => {
       role: doc.role || null,
       createdAt: doc.createdAt ? (doc.createdAt.toDate ? doc.createdAt.toDate().toLocaleDateString() : new Date(doc.createdAt).toLocaleDateString()) : 'N/A',
       updatedAt: doc.updatedAt ? (doc.updatedAt.toDate ? doc.updatedAt.toDate().toLocaleDateString() : new Date(doc.updatedAt).toLocaleDateString()) : 'N/A',
-    }))
-    
+}))
+
     totalUsers.value = adminDocs.length
     console.log('Fetched users:', users.value) // Debug log
   } catch (error) {
@@ -193,7 +193,7 @@ const addNewUser = async userData => {
 
     // Firebase account and Firestore document already created
     // Just refetch users and show success notification
-    fetchUsers()
+  fetchUsers()
     showNotification('Admin account created successfully!', 'success')
   } catch (error) {
     console.error('Error creating admin:', error)
