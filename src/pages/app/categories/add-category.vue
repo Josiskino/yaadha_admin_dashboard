@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { useFirebase } from '@/composables/useFirebase'
+import { useCloudinary } from '@/composables/useCloudinary'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -59,65 +60,62 @@ const resetForm = () => {
   imageUrl.value = ''
 }
 
-const handleFileChange = async event => {
+const handleFileChange = event => {
   const file = event.target.files?.[0]
   
   if (file) {
-    // Check file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('L\'image est trop volumineuse. Veuillez choisir une image de moins de 2MB.')
-      
+    // Validation locale
+    if (file.size > 10 * 1024 * 1024) {
+      alert('L\'image est trop volumineuse. Veuillez choisir une image de moins de 10MB.')
       return
     }
 
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!validTypes.includes(file.type)) {
+      alert('Format invalide. Seuls JPG, PNG, WEBP et GIF sont autorisés.')
+      return
+    }
+
+    // Stocker le fichier pour upload ultérieur
     imageFile.value = file
     
-    // Preview image (temporary for display)
+    // Prévisualisation locale uniquement (pas d'upload)
     const reader = new FileReader()
-    
     reader.onload = e => {
-      imageUrl.value = e.target.result
+      imageUrl.value = e.target.result // Base64 preview
     }
     reader.readAsDataURL(file)
-    
-    // Upload to Firebase Storage
-    try {
-      const { storage } = useFirebase()
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage')
-      
-      const storageRef = ref(storage, `categories/${Date.now()}_${file.name}`)
-
-      await uploadBytes(storageRef, file)
-
-      const url = await getDownloadURL(storageRef)
-      
-      imageUrl.value = url // Store URL instead of base64
-      imageFile.value = null // Clear file since we have URL
-      console.log('Image uploaded to Storage:', url)
-    } catch (error) {
-      console.error('Error uploading image:', error)
-
-      // Keep base64 for now if Storage upload fails
-      console.log('Keeping base64 image due to Storage error')
-    }
   }
 }
 
-const onSubmit = () => {
-  refForm.value?.validate().then(({ valid }) => {
-    if (valid) {
-      // If image is base64 and too large, don't include it
-      let imageToInclude = imageUrl.value
-      if (imageToInclude && imageToInclude.startsWith('data:') && imageToInclude.length > 1000000) {
-        console.warn('Image too large for Firestore, skipping image')
-        imageToInclude = null
+const isUploading = ref(false)
+
+const onSubmit = async () => {
+  const { valid } = await refForm.value?.validate()
+  
+  if (valid) {
+    try {
+      isUploading.value = true
+      let finalImageUrl = imageUrl.value
+
+      // Si un nouveau fichier a été sélectionné, l'uploader vers Cloudinary
+      if (imageFile.value) {
+        const { uploadImage } = useCloudinary()
+        const result = await uploadImage(imageFile.value, 'categories')
+        
+        if (result.success) {
+          finalImageUrl = result.url
+          console.log('✅ Image uploaded to Cloudinary:', result.url)
+        } else {
+          throw new Error(result.error || 'Upload failed')
+        }
       }
 
       const dataToEmit = {
         name: categoryName.value,
         description: description.value,
         order: Number(order.value) || 0,
-        imageUrl: imageToInclude,
+        imageUrl: finalImageUrl || '',
       }
       
       emit('categoryData', dataToEmit)
@@ -128,8 +126,13 @@ const onSubmit = () => {
         refForm.value?.resetValidation()
         resetForm()
       })
+    } catch (error) {
+      console.error('Error during submission:', error)
+      alert(`Erreur: ${error.message}`)
+    } finally {
+      isUploading.value = false
     }
-  })
+  }
 }
 
 const handleDrawerModelValueUpdate = val => {
@@ -260,8 +263,10 @@ const handleDrawerModelValueUpdate = val => {
                   type="submit"
                   block
                   class="me-3"
+                  :loading="isUploading"
+                  :disabled="isUploading"
                 >
-                  {{ isEditing ? 'Update Category' : 'Add Category' }}
+                  {{ isUploading ? 'Uploading...' : (isEditing ? 'Update Category' : 'Add Category') }}
                 </VBtn>
                 <VBtn
                   variant="outlined"

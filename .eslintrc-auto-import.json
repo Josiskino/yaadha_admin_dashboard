@@ -365,6 +365,7 @@
     "useModel": true,
     "useTemplateRef": true,
     "fixAdminRole": true,
-    "fixAdminRoleConsoleScript": true
+    "fixAdminRoleConsoleScript": true,
+    "useCloudinary": true
   }
 }

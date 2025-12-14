@@ -10,7 +10,8 @@
     "lint": "eslint . -c .eslintrc.cjs --fix --ext .ts,.js,.cjs,.vue,.tsx,.jsx",
     "build:icons": "tsx src/plugins/iconify/build-icons.js",
     "msw:init": "msw init public/ --save",
-    "postinstall": "npm run build:icons && npm run msw:init"
+    "postinstall": "npm run build:icons && npm run msw:init",
+    "import:pdf": "node scripts/import-from-pdf.js"
   },
   "dependencies": {
     "@casl/ability": "6.7.1",
@@ -30,6 +31,7 @@
     "@vueuse/math": "10.11.0",
     "apexcharts": "3.51.0",
     "chart.js": "4.4.3",
+    "cloudinary": "^2.8.0",
     "cookie-es": "1.2.2",
     "eslint-plugin-regexp": "2.6.0",
     "firebase": "^12.4.0",
@@ -80,6 +82,7 @@
     "@videojs-player/vue": "1.0.0",
     "@vitejs/plugin-vue": "5.1.1",
     "@vitejs/plugin-vue-jsx": "4.0.0",
+    "dotenv": "^17.2.3",
     "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-import-resolver-typescript": "3.6.1",
@@ -91,6 +94,7 @@
     "eslint-plugin-unicorn": "51.0.1",
     "eslint-plugin-vue": "9.27.0",
     "msw": "2.3.4",
+    "pdf-parse": "^2.4.5",
     "postcss-html": "1.7.0",
     "postcss-scss": "4.0.9",
     "sass": "1.76.0",

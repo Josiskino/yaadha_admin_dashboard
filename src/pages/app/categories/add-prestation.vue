@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { useFirebase } from '@/composables/useFirebase'
+import { useCloudinary } from '@/composables/useCloudinary'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -86,49 +87,55 @@ const closeNavigationDrawer = () => {
   })
 }
 
-const handleFileChange = async event => {
+const handleFileChange = event => {
   const file = event.target.files?.[0]
   
   if (file) {
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Image too large. Please choose an image less than 2MB.')
-      
+    // Validation locale
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image too large. Please choose an image less than 10MB.')
       return
     }
 
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!validTypes.includes(file.type)) {
+      alert('Invalid format. Only JPG, PNG, WEBP and GIF are allowed.')
+      return
+    }
+
+    // Stocker le fichier pour upload ultérieur
     imageFile.value = file
     
+    // Prévisualisation locale uniquement (pas d'upload)
     const reader = new FileReader()
-    
     reader.onload = e => {
-      imageUrl.value = e.target.result
+      imageUrl.value = e.target.result // Base64 preview
     }
     reader.readAsDataURL(file)
-    
-    try {
-      const { storage } = useFirebase()
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage')
-      
-      const storageRef = ref(storage, `prestations/${Date.now()}_${file.name}`)
-
-      await uploadBytes(storageRef, file)
-
-      const url = await getDownloadURL(storageRef)
-      
-      imageUrl.value = url
-      imageFile.value = null
-    } catch (error) {
-      console.error('Error uploading image:', error)
-    }
   }
 }
 
-const onSubmit = () => {
-  refForm.value?.validate().then(({ valid }) => {
-    if (valid) {
-      let imageToInclude = imageUrl.value
-      if (imageToInclude && imageToInclude.startsWith('data:') && imageToInclude.length > 1000000) {
-        imageToInclude = null
+const isUploading = ref(false)
+
+const onSubmit = async () => {
+  const { valid } = await refForm.value?.validate()
+  
+  if (valid) {
+    try {
+      isUploading.value = true
+      let finalImageUrl = imageUrl.value
+
+      // Si un nouveau fichier a été sélectionné, l'uploader vers Cloudinary
+      if (imageFile.value) {
+        const { uploadImage } = useCloudinary()
+        const result = await uploadImage(imageFile.value, 'prestations')
+        
+        if (result.success) {
+          finalImageUrl = result.url
+          console.log('✅ Image uploaded to Cloudinary:', result.url)
+        } else {
+          throw new Error(result.error || 'Upload failed')
+        }
       }
 
       const dataToEmit = {
@@ -136,7 +143,7 @@ const onSubmit = () => {
         description: description.value,
         categoryId: categoryId.value,
         subCategoryId: subCategoryId.value,
-        imageUrl: imageToInclude,
+        imageUrl: finalImageUrl || '',
       }
       
       if (isEditing.value) {
@@ -151,8 +158,13 @@ const onSubmit = () => {
         refForm.value?.resetValidation()
         resetForm()
       })
+    } catch (error) {
+      console.error('Error during submission:', error)
+      alert(`Error: ${error.message}`)
+    } finally {
+      isUploading.value = false
     }
-  })
+  }
 }
 
 const handleDrawerModelValueUpdate = val => {
@@ -306,8 +318,10 @@ const handleDrawerModelValueUpdate = val => {
                   type="submit"
                   block
                   class="me-3"
+                  :loading="isUploading"
+                  :disabled="isUploading"
                 >
-                  {{ isEditing ? 'Update Prestation' : 'Add Prestation' }}
+                  {{ isUploading ? 'Uploading...' : (isEditing ? 'Update Prestation' : 'Add Prestation') }}
                 </VBtn>
                 <VBtn
                   variant="outlined"

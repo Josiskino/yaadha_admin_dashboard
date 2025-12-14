@@ -223,69 +223,37 @@ const resolveCategoryStatusVariant = stat => {
 }
 
 const isAddNewCategoryDrawerVisible = ref(false)
-const isEditCategoryDrawerVisible = ref(false)
 const isManageSubCategoriesDrawerVisible = ref(false)
 const selectedCategory = ref(null)
 
 const addNewCategory = async categoryData => {
   try {
-    console.log('Adding category with data:', categoryData)
+    if (selectedCategory.value) {
+      // Update existing category
+      await updateDoc(doc(db, 'categories', selectedCategory.value.id), {
+        ...categoryData,
+        updatedAt: serverTimestamp(),
+      })
+      showNotification('Category updated successfully!', 'success')
+    } else {
+      // Add new category
+      await addDoc(collection(db, 'categories'), {
+        ...categoryData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      showNotification('Category created successfully!', 'success')
+    }
     
-    const { serverTimestamp } = await import('firebase/firestore')
-    
-    await addDoc(collection(db, 'categories'), {
-      name: categoryData.name,
-      description: categoryData.description,
-      imageUrl: categoryData.imageUrl || '',
-      order: categoryData.order || 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    
-    console.log('Category added successfully')
-
     // Refetch categories
     const fetchedCategories = await fetchCategories()
-
     categories.value = fetchedCategories
-
+    
     isAddNewCategoryDrawerVisible.value = false
-
-    // Show success notification
-    showNotification('Category created successfully!', 'success')
-
-    console.log('Categories refreshed')
+    selectedCategory.value = null
   } catch (error) {
-    console.error('Error adding category:', error)
-    showNotification('Error creating category', 'error')
-  }
-}
-
-const editCategory = async (categoryData, categoryId) => {
-  try {
-    const { serverTimestamp } = await import('firebase/firestore')
-    const categoryRef = doc(db, 'categories', categoryId)
-    
-    await updateDoc(categoryRef, {
-      name: categoryData.name,
-      description: categoryData.description,
-      imageUrl: categoryData.imageUrl || '',
-      order: categoryData.order || 0,
-      updatedAt: serverTimestamp(),
-    })
-    
-    // Refetch categories
-    const fetchedCategories = await fetchCategories()
-    
-    categories.value = fetchedCategories
-    
-    isEditCategoryDrawerVisible.value = false
-    
-    // Show success notification
-    showNotification('Category updated successfully!', 'success')
-  } catch (error) {
-    console.error('Error updating category:', error)
-    showNotification('Error updating category', 'error')
+    console.error('Error saving category:', error)
+    showNotification('Error saving category', 'error')
   }
 }
 
@@ -295,7 +263,7 @@ const deleteCategory = async id => {
 
 const openEditCategory = category => {
   selectedCategory.value = category
-  isEditCategoryDrawerVisible.value = true
+  isAddNewCategoryDrawerVisible.value = true
 }
 
 const openManageSubCategories = category => {
@@ -467,7 +435,7 @@ watch(categories, newCategories => {
           <!-- 👉 Add category button -->
           <VBtn
             prepend-icon="tabler-plus"
-            @click="isAddNewCategoryDrawerVisible = true"
+            @click="isAddNewCategoryDrawerVisible = true; selectedCategory = null"
           >
             Add Category
           </VBtn>
