@@ -147,6 +147,7 @@ const onSubmit = async () => {
         country: country.value,
         contact: contact.value,
         status: status.value,
+        role: 'administrator', // Add role field for login verification
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }

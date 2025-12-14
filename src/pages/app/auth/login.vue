@@ -19,13 +19,23 @@ const router = useRouter()
 const form = ref({
   email: '',
   password: '',
-  remember: false,
 })
 
 const isPasswordVisible = ref(false)
 const isLoading = ref(false)
-const errorMessage = ref('')
 const refForm = ref()
+
+// Snackbar for notifications
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('error')
+
+// Show notification
+const showNotification = (message, type = 'error') => {
+  snackbarText.value = message
+  snackbarColor.value = type
+  snackbar.value = true
+}
 
 // Login function
 const handleLogin = async () => {
@@ -37,15 +47,19 @@ const handleLogin = async () => {
   }
   
   isLoading.value = true
-  errorMessage.value = ''
   
   const result = await login(form.value.email, form.value.password)
   
   if (result.success) {
+    // Show success notification
+    showNotification('Connexion réussie ! Redirection...', 'success')
     // Redirect after successful login to categories page
-    await router.replace({ name: 'categories-categories-dashboard' })
+    setTimeout(async () => {
+      await router.replace({ name: 'categories-categories-dashboard' })
+    }, 1000)
   } else {
-    errorMessage.value = result.error
+    // Show error notification
+    showNotification(result.error, 'error')
   }
   
   isLoading.value = false
@@ -125,28 +139,11 @@ const handleLogin = async () => {
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
 
-                <!-- remember me checkbox -->
-                <div class="d-flex align-center justify-space-between flex-wrap my-6">
-                  <VCheckbox
-                    v-model="form.remember"
-                    label="Remember me"
-                  />
-                </div>
-
-                <!-- Error display -->
-                <VAlert
-                  v-if="errorMessage"
-                  type="error"
-                  variant="tonal"
-                  class="mb-4"
-                >
-                  {{ errorMessage }}
-                </VAlert>
-
                 <!-- login button -->
                 <VBtn
                   block
                   type="submit"
+                  class="mt-6"
                   :loading="isLoading"
                   :disabled="isLoading"
                 >
@@ -158,6 +155,27 @@ const handleLogin = async () => {
         </VCardText>
       </VCard>
     </div>
+
+    <!-- Notification Snackbar -->
+    <VSnackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      :timeout="5000"
+      location="top"
+      variant="elevated"
+    >
+      {{ snackbarText }}
+      <template #actions>
+        <VBtn
+          icon
+          variant="text"
+          size="small"
+          @click="snackbar = false"
+        >
+          <VIcon icon="tabler-x" />
+        </VBtn>
+      </template>
+    </VSnackbar>
   </div>
 </template>
 

@@ -29,30 +29,37 @@ export const useAuth = () => {
       const userCredential = await signIn(email, password)
       const userData = await getDocument('admin', userCredential.user.uid)
       
-      if (userData && userData.role) {
-        // Set cookies for compatibility with existing code
-        useCookie('accessToken').value = userCredential.user.accessToken
-        useCookie('userData').value = {
-          id: userCredential.user.uid,
-          email: userCredential.user.email,
-          fullName: userData.fullName,
-          role: userData.role,
-          avatar: userData.avatar,
-        }
-        
-        // Initialize CASL abilities based on role
-        // For admin roles, allow all actions
-        const abilityRules = userData.role === 'administrator' || userData.role === 'manager'
-          ? [{ action: 'manage', subject: 'all' }]
-          : []
-        
-        useCookie('userAbilityRules').value = abilityRules
-        ability.update(abilityRules)
-        
-        return { success: true, userData }
-      } else {
-        throw new Error('User not found in admin database')
+      // Check if user document exists
+      if (!userData) {
+        throw new Error('User not found in admin database. Please contact an administrator.')
       }
+      
+      // Check if user has a role assigned
+      if (!userData.role) {
+        console.error('User document exists but missing role field:', userData)
+        throw new Error('User account is missing role assignment. Please add the "role" field (administrator or manager) to your admin document in Firestore.')
+      }
+      
+      // Set cookies for compatibility with existing code
+      useCookie('accessToken').value = userCredential.user.accessToken
+      useCookie('userData').value = {
+        id: userCredential.user.uid,
+        email: userCredential.user.email,
+        fullName: userData.fullName,
+        role: userData.role,
+        avatar: userData.avatar,
+      }
+      
+      // Initialize CASL abilities based on role
+      // For admin roles, allow all actions
+      const abilityRules = userData.role === 'administrator' || userData.role === 'manager'
+        ? [{ action: 'manage', subject: 'all' }]
+        : []
+      
+      useCookie('userAbilityRules').value = abilityRules
+      ability.update(abilityRules)
+      
+      return { success: true, userData }
     } catch (error) {
       console.error('Login error:', error)
       

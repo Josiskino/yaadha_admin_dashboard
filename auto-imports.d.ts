@@ -47,6 +47,8 @@ declare global {
   const effectScope: typeof import('vue')['effectScope']
   const emailValidator: typeof import('./src/@core/utils/validators.js')['emailValidator']
   const extendRef: typeof import('@vueuse/core')['extendRef']
+  const fixAdminRole: typeof import('./src/utils/fixAdminRole.js')['fixAdminRole']
+  const fixAdminRoleConsoleScript: typeof import('./src/utils/fixAdminRole.js')['fixAdminRoleConsoleScript']
   const formatDate: typeof import('./src/@core/utils/formatters.js')['formatDate']
   const formatDateToMonthShort: typeof import('./src/@core/utils/formatters.js')['formatDateToMonthShort']
   const getActivePinia: typeof import('pinia')['getActivePinia']
@@ -409,6 +411,8 @@ declare module 'vue' {
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly emailValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['emailValidator']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly fixAdminRole: UnwrapRef<typeof import('./src/utils/fixAdminRole.js')['fixAdminRole']>
+    readonly fixAdminRoleConsoleScript: UnwrapRef<typeof import('./src/utils/fixAdminRole.js')['fixAdminRoleConsoleScript']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDate']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDateToMonthShort']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>

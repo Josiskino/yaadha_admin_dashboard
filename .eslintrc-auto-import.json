@@ -363,6 +363,8 @@
     "onWatcherCleanup": true,
     "useId": true,
     "useModel": true,
-    "useTemplateRef": true
+    "useTemplateRef": true,
+    "fixAdminRole": true,
+    "fixAdminRoleConsoleScript": true
   }
 }
