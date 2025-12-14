@@ -1,6 +1,6 @@
 <script setup>
+import { ref, computed, watch, nextTick } from 'vue'
 import { useFirebase } from '@/composables/useFirebase'
-import { ref } from 'vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -24,10 +24,9 @@ const refForm = ref()
 const fileInputRef = ref()
 const categoryName = ref('')
 const description = ref('')
-const status = ref('active')
+const order = ref(0)
 const imageFile = ref(null)
 const imageUrl = ref('')
-const subCategories = ref([{ id: 1, name: '' }])
 
 // Check if editing
 const isEditing = computed(() => !!props.category)
@@ -37,9 +36,8 @@ watch(() => props.category, newCategory => {
   if (newCategory) {
     categoryName.value = newCategory.name || ''
     description.value = newCategory.description || ''
-    status.value = newCategory.status || 'active'
-    imageUrl.value = newCategory.image || ''
-    subCategories.value = (newCategory.subCategories && newCategory.subCategories.length > 0) ? newCategory.subCategories : [{ id: 1, name: '' }]
+    order.value = newCategory.order || 0
+    imageUrl.value = newCategory.imageUrl || newCategory.image || ''
   }
 }, { immediate: true })
 
@@ -56,10 +54,9 @@ const closeNavigationDrawer = () => {
 const resetForm = () => {
   categoryName.value = ''
   description.value = ''
-  status.value = 'active'
+  order.value = 0
   imageFile.value = null
   imageUrl.value = ''
-  subCategories.value = [{ id: 1, name: '' }]
 }
 
 const handleFileChange = async event => {
@@ -106,35 +103,9 @@ const handleFileChange = async event => {
   }
 }
 
-const addSubCategory = () => {
-  subCategories.value.push({
-    id: Date.now(),
-    name: '',
-  })
-}
-
-const removeSubCategory = index => {
-  if (subCategories.value.length > 1) {
-    subCategories.value.splice(index, 1)
-  }
-}
-
-const updateSubCategory = (index, value) => {
-  subCategories.value[index].name = value
-}
-
 const onSubmit = () => {
   refForm.value?.validate().then(({ valid }) => {
     if (valid) {
-      // Filter out empty sub-categories
-      const filledSubCategories = subCategories.value.filter(sc => sc.name.trim())
-      
-      // At least one sub-category is required
-      if (filledSubCategories.length === 0) {
-        // Show error message
-        return
-      }
-      
       // If image is base64 and too large, don't include it
       let imageToInclude = imageUrl.value
       if (imageToInclude && imageToInclude.startsWith('data:') && imageToInclude.length > 1000000) {
@@ -145,10 +116,8 @@ const onSubmit = () => {
       const dataToEmit = {
         name: categoryName.value,
         description: description.value,
-        status: status.value,
-        image: imageToInclude,
-        subCategories: filledSubCategories,
-        parentId: null,
+        order: Number(order.value) || 0,
+        imageUrl: imageToInclude,
       }
       
       emit('categoryData', dataToEmit)
@@ -167,11 +136,6 @@ const handleDrawerModelValueUpdate = val => {
   emit('update:isDrawerOpen', val)
 }
 
-const statusOptions = [
-  { title: 'Active', value: 'active' },
-  { title: 'Inactive', value: 'inactive' },
-  { title: 'Pending', value: 'pending' },
-]
 </script>
 
 <template>
@@ -279,71 +243,15 @@ const statusOptions = [
                 />
               </VCol>
 
-              <!-- 👉 Status -->
+              <!-- 👉 Order -->
               <VCol cols="12">
-                <AppSelect
-                  v-model="status"
-                  :items="statusOptions"
-                  label="Status"
-                  placeholder="Select Status"
+                <AppTextField
+                  v-model.number="order"
+                  type="number"
+                  label="Display Order"
+                  placeholder="0"
+                  hint="Lower numbers appear first"
                 />
-              </VCol>
-
-              <!-- 👉 Sub Categories Section -->
-              <VCol cols="12">
-                <VDivider class="my-4" />
-                
-                <div class="d-flex align-center mb-4">
-                  <VIcon
-                    icon="tabler-folders"
-                    size="20"
-                    class="me-2"
-                  />
-                  <span class="text-sm font-weight-medium">Sub Categories & Services</span>
-                  <VSpacer />
-                  <VBtn
-                    icon
-                    size="small"
-                    variant="text"
-                    color="primary"
-                    @click="addSubCategory"
-                  >
-                    <VIcon icon="tabler-plus" />
-                  </VBtn>
-                </div>
-
-                <!-- 👉 Dynamic Sub Category Inputs -->
-                <div class="d-flex flex-column gap-3 mb-4">
-                  <div
-                    v-for="(subCat, index) in subCategories"
-                    :key="subCat.id"
-                    class="d-flex align-end gap-2"
-                  >
-                    <div style="flex: 1;">
-                      <AppTextField
-                        :model-value="subCat.name"
-                        :label="`Sub-category ${index + 1}`"
-                        placeholder="e.g. Install, Repair"
-                        density="compact"
-                        @update:model-value="updateSubCategory(index, $event)"
-                      />
-                    </div>
-                    
-                    <!-- Remove button (never show on first input) -->
-                    <VBtn
-                      v-if="index > 0"
-                      icon
-                      size="small"
-                      variant="text"
-                      color="error"
-                      @click="removeSubCategory(index)"
-                    >
-                      <VIcon icon="tabler-trash" />
-                    </VBtn>
-                  </div>
-                </div>
-
-                <span class="text-xs text-disabled">At least one sub-category is required</span>
               </VCol>
 
               <!-- 👉 Actions -->

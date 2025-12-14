@@ -1,4 +1,5 @@
 <script setup>
+import { ref, computed, watch, nextTick } from 'vue'
 import { useFirebase } from '@/composables/useFirebase'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
@@ -28,13 +29,20 @@ const fileInputRef = ref()
 const name = ref('')
 const description = ref('')
 const categoryId = ref('')
-const status = ref('active')
-const order = ref(0)
 const imageFile = ref(null)
 const imageUrl = ref('')
 
 // Check if editing
 const isEditing = computed(() => !!props.subCategory)
+
+// Reset form function (declared before watches that use it)
+const resetForm = () => {
+  name.value = ''
+  description.value = ''
+  categoryId.value = ''
+  imageFile.value = null
+  imageUrl.value = ''
+}
 
 // Populate form if editing
 watch(() => props.subCategory, newSubCategory => {
@@ -42,8 +50,6 @@ watch(() => props.subCategory, newSubCategory => {
     name.value = newSubCategory.name || ''
     description.value = newSubCategory.description || ''
     categoryId.value = newSubCategory.categoryId || ''
-    status.value = newSubCategory.status || 'active'
-    order.value = newSubCategory.order || 0
     imageUrl.value = newSubCategory.imageUrl || ''
   } else {
     resetForm()
@@ -57,16 +63,6 @@ const closeNavigationDrawer = () => {
     refForm.value?.resetValidation()
     resetForm()
   })
-}
-
-const resetForm = () => {
-  name.value = ''
-  description.value = ''
-  categoryId.value = ''
-  status.value = 'active'
-  order.value = 0
-  imageFile.value = null
-  imageUrl.value = ''
 }
 
 const handleFileChange = async event => {
@@ -118,8 +114,6 @@ const onSubmit = () => {
         name: name.value,
         description: description.value,
         categoryId: categoryId.value,
-        status: status.value,
-        order: order.value,
         imageUrl: imageToInclude,
       }
       
@@ -143,11 +137,6 @@ const handleDrawerModelValueUpdate = val => {
   emit('update:isDrawerOpen', val)
 }
 
-const statusOptions = [
-  { title: 'Active', value: 'active' },
-  { title: 'Inactive', value: 'inactive' },
-  { title: 'Pending', value: 'pending' },
-]
 </script>
 
 <template>
@@ -268,25 +257,6 @@ const statusOptions = [
                 />
               </VCol>
 
-              <!-- 👉 Order -->
-              <VCol cols="12">
-                <AppTextField
-                  v-model.number="order"
-                  type="number"
-                  label="Display Order"
-                  placeholder="0"
-                />
-              </VCol>
-
-              <!-- 👉 Status -->
-              <VCol cols="12">
-                <AppSelect
-                  v-model="status"
-                  :items="statusOptions"
-                  label="Status"
-                  placeholder="Select Status"
-                />
-              </VCol>
 
               <!-- 👉 Actions -->
               <VCol cols="12">

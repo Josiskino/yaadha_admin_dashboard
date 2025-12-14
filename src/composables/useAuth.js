@@ -3,7 +3,7 @@ import { ability } from '@/plugins/casl/ability'
 import { useRouter } from 'vue-router'
 
 export const useAuth = () => {
-  const { currentUser, signIn, signOut, getDocument } = useFirebase()
+  const { currentUser, signIn, signOut, getDocument, updateDocument } = useFirebase()
   const router = useRouter()
 
   // Check if user is authenticated
@@ -34,10 +34,23 @@ export const useAuth = () => {
         throw new Error('User not found in admin database. Please contact an administrator.')
       }
       
-      // Check if user has a role assigned
+      // Check if user has a role assigned - if not, assign 'administrator' by default
       if (!userData.role) {
-        console.error('User document exists but missing role field:', userData)
-        throw new Error('User account is missing role assignment. Please add the "role" field (administrator or manager) to your admin document in Firestore.')
+        console.warn('User document exists but missing role field. Assigning "administrator" role automatically...', userData)
+        
+        // Automatically assign administrator role
+        try {
+          await updateDocument('admin', userCredential.user.uid, {
+            role: 'administrator',
+          })
+          
+          // Update userData with the new role
+          userData.role = 'administrator'
+          console.log('✅ Role "administrator" assigned successfully')
+        } catch (updateError) {
+          console.error('Error updating user role:', updateError)
+          throw new Error('Could not assign role. Please contact an administrator.')
+        }
       }
       
       // Set cookies for compatibility with existing code

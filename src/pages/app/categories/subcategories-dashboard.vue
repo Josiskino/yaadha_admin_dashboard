@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { computed, onMounted, ref } from 'vue'
 import AddSubCategoryDrawer from './add-subcategory.vue'
 
 definePage({
@@ -11,7 +12,6 @@ definePage({
 
 // Composable pour gérer les sous-catégories avec Firebase
 const { db } = useFirebase()
-const { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, serverTimestamp } = await import('firebase/firestore')
 
 // 👉 Notifications
 const snackbar = ref(false)
@@ -54,7 +54,6 @@ const confirmDelete = async () => {
 
 // 👉 Store
 const searchQuery = ref('')
-const selectedStatus = ref()
 const selectedCategory = ref()
 
 // Data table options
@@ -75,8 +74,6 @@ const headers = [
   { title: 'Sub-Category', key: 'name' },
   { title: 'Category', key: 'categoryName' },
   { title: 'Description', key: 'description' },
-  { title: 'Order', key: 'order' },
-  { title: 'Status', key: 'status' },
   { title: 'Actions', key: 'actions', sortable: false },
 ]
 
@@ -129,7 +126,14 @@ const fetchSubCategories = async () => {
 }
 
 // Load data on mount
-await fetchSubCategories()
+onMounted(async () => {
+  try {
+    await fetchSubCategories()
+  } catch (error) {
+    console.error('Error loading sub-categories:', error)
+    showNotification('Error loading data. Please refresh the page.', 'error')
+  }
+})
 
 // Add/Edit Drawer
 const isAddNewSubCategoryDrawerVisible = ref(false)
@@ -168,16 +172,6 @@ const editSubCategory = subCategory => {
   isAddNewSubCategoryDrawerVisible.value = true
 }
 
-// Status variant
-const resolveStatusVariant = status => {
-  if (status === 'active')
-    return { color: 'success', text: 'Active' }
-  if (status === 'inactive')
-    return { color: 'error', text: 'Inactive' }
-  
-  return { color: 'warning', text: 'Pending' }
-}
-
 // Computed for filtered sub-categories
 const filteredSubCategories = computed(() => {
   let filtered = subCategories.value
@@ -187,10 +181,6 @@ const filteredSubCategories = computed(() => {
       sc.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       sc.categoryName.toLowerCase().includes(searchQuery.value.toLowerCase()),
     )
-  }
-
-  if (selectedStatus.value) {
-    filtered = filtered.filter(sc => sc.status === selectedStatus.value)
   }
 
   if (selectedCategory.value) {
@@ -222,21 +212,6 @@ const filteredSubCategories = computed(() => {
             :items="categories"
             item-title="name"
             item-value="id"
-            clearable
-            density="compact"
-          />
-        </div>
-
-        <!-- 👉 Filter by Status -->
-        <div class="me-3" style="inline-size: 200px;">
-          <AppSelect
-            v-model="selectedStatus"
-            placeholder="Select Status"
-            :items="[
-              { title: 'Active', value: 'active' },
-              { title: 'Inactive', value: 'inactive' },
-              { title: 'Pending', value: 'pending' },
-            ]"
             clearable
             density="compact"
           />
@@ -285,17 +260,6 @@ const filteredSubCategories = computed(() => {
           <div class="d-flex flex-column">
             <span class="font-weight-medium">{{ item.name }}</span>
           </div>
-        </template>
-
-        <!-- Status -->
-        <template #item.status="{ item }">
-          <VChip
-            :color="resolveStatusVariant(item.status).color"
-            size="small"
-            class="font-weight-medium"
-          >
-            {{ resolveStatusVariant(item.status).text }}
-          </VChip>
         </template>
 
         <!-- Actions -->
@@ -351,10 +315,11 @@ const filteredSubCategories = computed(() => {
 
     <!-- 👉 Add/Edit Sub-Category Drawer -->
     <AddSubCategoryDrawer
-      v-model:is-drawer-open="isAddNewSubCategoryDrawerVisible"
-      :sub-category="selectedSubCategory"
+      :isDrawerOpen="isAddNewSubCategoryDrawerVisible"
+      :subCategory="selectedSubCategory"
       :categories="categories"
-      @sub-category-data="addNewSubCategory"
+      @update:isDrawerOpen="isAddNewSubCategoryDrawerVisible = $event"
+      @subCategoryData="addNewSubCategory"
     />
 
     <!-- 👉 Notification Snackbar -->

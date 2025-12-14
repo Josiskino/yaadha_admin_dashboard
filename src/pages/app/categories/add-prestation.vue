@@ -1,4 +1,5 @@
 <script setup>
+import { ref, computed, watch, nextTick } from 'vue'
 import { useFirebase } from '@/composables/useFirebase'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
@@ -33,8 +34,6 @@ const name = ref('')
 const description = ref('')
 const categoryId = ref('')
 const subCategoryId = ref('')
-const status = ref('active')
-const order = ref(0)
 const imageFile = ref(null)
 const imageUrl = ref('')
 
@@ -48,6 +47,16 @@ const filteredSubCategories = computed(() => {
   return props.subCategories.filter(sc => sc.categoryId === categoryId.value)
 })
 
+// Reset form function (declared before watches that use it)
+const resetForm = () => {
+  name.value = ''
+  description.value = ''
+  categoryId.value = ''
+  subCategoryId.value = ''
+  imageFile.value = null
+  imageUrl.value = ''
+}
+
 // Populate form if editing
 watch(() => props.prestation, newPrestation => {
   if (newPrestation) {
@@ -55,8 +64,6 @@ watch(() => props.prestation, newPrestation => {
     description.value = newPrestation.description || ''
     categoryId.value = newPrestation.categoryId || ''
     subCategoryId.value = newPrestation.subCategoryId || ''
-    status.value = newPrestation.status || 'active'
-    order.value = newPrestation.order || 0
     imageUrl.value = newPrestation.imageUrl || ''
   } else {
     resetForm()
@@ -77,17 +84,6 @@ const closeNavigationDrawer = () => {
     refForm.value?.resetValidation()
     resetForm()
   })
-}
-
-const resetForm = () => {
-  name.value = ''
-  description.value = ''
-  categoryId.value = ''
-  subCategoryId.value = ''
-  status.value = 'active'
-  order.value = 0
-  imageFile.value = null
-  imageUrl.value = ''
 }
 
 const handleFileChange = async event => {
@@ -140,8 +136,6 @@ const onSubmit = () => {
         description: description.value,
         categoryId: categoryId.value,
         subCategoryId: subCategoryId.value,
-        status: status.value,
-        order: order.value,
         imageUrl: imageToInclude,
       }
       
@@ -165,11 +159,6 @@ const handleDrawerModelValueUpdate = val => {
   emit('update:isDrawerOpen', val)
 }
 
-const statusOptions = [
-  { title: 'Active', value: 'active' },
-  { title: 'Inactive', value: 'inactive' },
-  { title: 'Pending', value: 'pending' },
-]
 </script>
 
 <template>
@@ -310,25 +299,6 @@ const statusOptions = [
                 />
               </VCol>
 
-              <!-- 👉 Order -->
-              <VCol cols="12">
-                <AppTextField
-                  v-model.number="order"
-                  type="number"
-                  label="Display Order"
-                  placeholder="0"
-                />
-              </VCol>
-
-              <!-- 👉 Status -->
-              <VCol cols="12">
-                <AppSelect
-                  v-model="status"
-                  :items="statusOptions"
-                  label="Status"
-                  placeholder="Select Status"
-                />
-              </VCol>
 
               <!-- 👉 Actions -->
               <VCol cols="12">

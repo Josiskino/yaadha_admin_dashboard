@@ -1,5 +1,4 @@
 import { ability } from '@/plugins/casl/ability'
-import { useAbility } from '@casl/vue'
 
 /**
  * Returns ability result if ACL is configured or else just return true
@@ -43,22 +42,16 @@ export const canViewNavMenuGroup = item => {
 /**
  * Check if user can navigate to a route
  * Can be used outside Vue context (e.g., in guards)
- * Falls back to using ability directly if useAbility() fails
+ * Uses ability directly to avoid Vue context issues
  */
 export const canNavigate = to => {
-  try {
-    // Try to use useAbility() if in Vue context
-    const caslAbility = useAbility()
+  // Always use ability directly to avoid inject() errors in guards
+  // Guards run outside Vue component context, so useAbility() will fail
+  return to.matched.some(route => {
+    // If route has no meta.action/subject, allow navigation
+    if (!route.meta.action || !route.meta.subject)
+      return true
     
-    return to.matched.some(route => caslAbility.can(route.meta.action, route.meta.subject))
-  } catch (error) {
-    // Fallback to using ability directly when not in Vue context (e.g., in guards)
-    return to.matched.some(route => {
-      // If route has no meta.action/subject, allow navigation
-      if (!route.meta.action || !route.meta.subject)
-        return true
-      
-      return ability.can(route.meta.action, route.meta.subject)
-    })
-  }
+    return ability.can(route.meta.action, route.meta.subject)
+  })
 }

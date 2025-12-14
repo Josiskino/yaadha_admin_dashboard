@@ -67,15 +67,13 @@ export default function (app) {
         }).catch(error => {
           console.warn('⚠️ MSW: Erreur lors du désenregistrement des service workers:', error)
         })
-      } else {
-        console.log('MSW: Aucun service worker MSW trouvé, MSW est désactivé')
       }
-    }).catch(error => {
-      console.warn('⚠️ MSW: Erreur lors de la récupération des service workers:', error)
+      // Ne pas afficher de message si aucun worker n'est trouvé (c'est normal)
+    }).catch(() => {
+      // Ignorer silencieusement les erreurs de récupération des service workers
     })
   }
   
-  // Ne pas démarrer MSW du tout
-  console.log('MSW: Désactivé (mode Firebase)')
+  // Ne pas démarrer MSW du tout (silencieux)
   return
 }

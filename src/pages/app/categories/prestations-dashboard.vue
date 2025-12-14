@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
 import AddPrestationDrawer from './add-prestation.vue'
 
 definePage({
@@ -11,7 +12,6 @@ definePage({
 
 // Composable pour gérer les prestations avec Firebase
 const { db } = useFirebase()
-const { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } = await import('firebase/firestore')
 
 // 👉 Notifications
 const snackbar = ref(false)
@@ -53,7 +53,6 @@ const confirmDelete = async () => {
 
 // 👉 Store
 const searchQuery = ref('')
-const selectedStatus = ref()
 const selectedCategory = ref()
 const selectedSubCategory = ref()
 
@@ -75,8 +74,6 @@ const headers = [
   { title: 'Category', key: 'categoryName' },
   { title: 'Sub-Category', key: 'subCategoryName' },
   { title: 'Description', key: 'description' },
-  { title: 'Order', key: 'order' },
-  { title: 'Status', key: 'status' },
   { title: 'Actions', key: 'actions', sortable: false },
 ]
 
@@ -150,7 +147,14 @@ const fetchPrestations = async () => {
 }
 
 // Load data on mount
-await fetchPrestations()
+onMounted(async () => {
+  try {
+    await fetchPrestations()
+  } catch (error) {
+    console.error('Error loading prestations:', error)
+    showNotification('Error loading data. Please refresh the page.', 'error')
+  }
+})
 
 // Add/Edit Drawer
 const isAddNewPrestationDrawerVisible = ref(false)
@@ -189,16 +193,6 @@ const editPrestation = prestation => {
   isAddNewPrestationDrawerVisible.value = true
 }
 
-// Status variant
-const resolveStatusVariant = status => {
-  if (status === 'active')
-    return { color: 'success', text: 'Active' }
-  if (status === 'inactive')
-    return { color: 'error', text: 'Inactive' }
-  
-  return { color: 'warning', text: 'Pending' }
-}
-
 // Computed for filtered prestations
 const filteredPrestations = computed(() => {
   let filtered = prestations.value
@@ -209,10 +203,6 @@ const filteredPrestations = computed(() => {
       p.categoryName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       p.subCategoryName.toLowerCase().includes(searchQuery.value.toLowerCase()),
     )
-  }
-
-  if (selectedStatus.value) {
-    filtered = filtered.filter(p => p.status === selectedStatus.value)
   }
 
   if (selectedCategory.value) {
@@ -273,21 +263,6 @@ const filteredSubCategories = computed(() => {
           />
         </div>
 
-        <!-- 👉 Filter by Status -->
-        <div class="me-3" style="inline-size: 150px;">
-          <AppSelect
-            v-model="selectedStatus"
-            placeholder="Select Status"
-            :items="[
-              { title: 'Active', value: 'active' },
-              { title: 'Inactive', value: 'inactive' },
-              { title: 'Pending', value: 'pending' },
-            ]"
-            clearable
-            density="compact"
-          />
-        </div>
-
         <VSpacer />
 
         <!-- 👉 Add prestation button -->
@@ -338,17 +313,6 @@ const filteredSubCategories = computed(() => {
           <div style="max-width: 300px;">
             <span class="text-sm">{{ item.description || 'N/A' }}</span>
           </div>
-        </template>
-
-        <!-- Status -->
-        <template #item.status="{ item }">
-          <VChip
-            :color="resolveStatusVariant(item.status).color"
-            size="small"
-            class="font-weight-medium"
-          >
-            {{ resolveStatusVariant(item.status).text }}
-          </VChip>
         </template>
 
         <!-- Actions -->

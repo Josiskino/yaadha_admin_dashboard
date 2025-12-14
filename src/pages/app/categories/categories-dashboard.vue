@@ -1,10 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
 import AddCategoryDrawer from './add-category.vue'
 
 // Composable pour gérer les catégories avec Firebase
 const { db } = useFirebase()
-const { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } = await import('firebase/firestore')
 
 // 👉 Notifications
 const snackbar = ref(false)
@@ -130,10 +130,15 @@ const categories = ref([])
 const totalCategories = ref(0)
 
 onMounted(async () => {
-  const fetchedCategories = await fetchCategories()
-  
-  categories.value = fetchedCategories
-  totalCategories.value = fetchedCategories.length
+  try {
+    const fetchedCategories = await fetchCategories()
+    
+    categories.value = fetchedCategories
+    totalCategories.value = fetchedCategories.length
+  } catch (error) {
+    console.error('Error loading categories:', error)
+    showNotification('Error loading data. Please refresh the page.', 'error')
+  }
 })
 
 // 👉 Filtered categories
@@ -226,15 +231,15 @@ const addNewCategory = async categoryData => {
   try {
     console.log('Adding category with data:', categoryData)
     
+    const { serverTimestamp } = await import('firebase/firestore')
+    
     await addDoc(collection(db, 'categories'), {
       name: categoryData.name,
       description: categoryData.description,
-      status: categoryData.status,
-      image: categoryData.image,
-      subCategories: categoryData.subCategories,
-      parentId: categoryData.parentId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      imageUrl: categoryData.imageUrl || '',
+      order: categoryData.order || 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     })
     
     console.log('Category added successfully')
@@ -258,11 +263,15 @@ const addNewCategory = async categoryData => {
 
 const editCategory = async (categoryData, categoryId) => {
   try {
+    const { serverTimestamp } = await import('firebase/firestore')
     const categoryRef = doc(db, 'categories', categoryId)
     
     await updateDoc(categoryRef, {
-      ...categoryData,
-      updatedAt: new Date(),
+      name: categoryData.name,
+      description: categoryData.description,
+      imageUrl: categoryData.imageUrl || '',
+      order: categoryData.order || 0,
+      updatedAt: serverTimestamp(),
     })
     
     // Refetch categories
