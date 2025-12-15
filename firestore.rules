@@ -23,22 +23,22 @@ service cloud.firestore {
       allow delete: if request.auth != null;
     }
     
-    // Collection categories - Accessible aux utilisateurs authentifiés
+    // Collection categories - Lecture publique (pour l'app mobile), écriture admin uniquement
     match /categories/{categoryId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if true; // Public pour l'app mobile
+      allow write: if request.auth != null; // Écriture admin uniquement
     }
     
-    // Collection subcategories - Accessible aux utilisateurs authentifiés
+    // Collection subcategories - Lecture publique (pour l'app mobile), écriture admin uniquement
     match /subcategories/{subCategoryId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if true; // Public pour l'app mobile
+      allow write: if request.auth != null; // Écriture admin uniquement
     }
     
-    // Collection prestations - Accessible aux utilisateurs authentifiés
+    // Collection prestations - Lecture publique (pour l'app mobile), écriture admin uniquement
     match /prestations/{prestationId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if true; // Public pour l'app mobile
+      allow write: if request.auth != null; // Écriture admin uniquement
     }
     
     // Interdire tout autre accès par défaut
