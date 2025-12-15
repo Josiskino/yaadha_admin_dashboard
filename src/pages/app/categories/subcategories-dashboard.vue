@@ -1,5 +1,5 @@
 <script setup>
-import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, updateDoc, query, where } from 'firebase/firestore'
 import { computed, onMounted, ref } from 'vue'
 import AddSubCategoryDrawer from './add-subcategory.vue'
 
@@ -37,6 +37,25 @@ const confirmDelete = async () => {
   if (!subCategoryToDelete.value) return
   
   try {
+    // Vérifier les dépendances avant de supprimer
+    const prestationsSnapshot = await getDocs(
+      query(collection(db, 'prestations'), where('subCategoryId', '==', subCategoryToDelete.value))
+    )
+    
+    const prestationsCount = prestationsSnapshot.size
+    
+    // Si la sous-catégorie a des prestations, afficher un message d'erreur
+    if (prestationsCount > 0) {
+      showNotification(
+        `Impossible de supprimer cette sous-catégorie. Veuillez d'abord supprimer les ${prestationsCount} prestation${prestationsCount > 1 ? 's' : ''} qui en dépendent.`,
+        'error'
+      )
+      isDeleteModalVisible.value = false
+      subCategoryToDelete.value = null
+      return
+    }
+    
+    // Supprimer la sous-catégorie si aucune dépendance
     await deleteDoc(doc(db, 'subcategories', subCategoryToDelete.value))
     
     // Refetch sub-categories
@@ -264,13 +283,27 @@ const filteredSubCategories = computed(() => {
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <IconBtn @click="editSubCategory(item)">
-            <VIcon icon="tabler-edit" />
-          </IconBtn>
+          <VTooltip text="Modifier la sous-catégorie">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="editSubCategory(item)"
+              >
+                <VIcon icon="tabler-edit" />
+              </IconBtn>
+            </template>
+          </VTooltip>
 
-          <IconBtn @click="showDeleteConfirmation(item.id)">
-            <VIcon icon="tabler-trash" />
-          </IconBtn>
+          <VTooltip text="Supprimer la sous-catégorie">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="showDeleteConfirmation(item.id)"
+              >
+                <VIcon icon="tabler-trash" />
+              </IconBtn>
+            </template>
+          </VTooltip>
         </template>
 
         <!-- Pagination -->
@@ -349,10 +382,35 @@ const filteredSubCategories = computed(() => {
 
         <VCardText>
           <p class="text-base mb-4">
-            Are you sure you want to delete this sub-category?
+            Êtes-vous sûr de vouloir supprimer cette sous-catégorie ?
           </p>
-          <p class="text-sm text-medium-emphasis">
-            This action is irreversible.
+          
+          <!-- Afficher les dépendances si elles existent -->
+          <VAlert
+            v-if="subCategoryDependencies.prestations > 0"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
+            <VAlertTitle>Impossible de supprimer</VAlertTitle>
+            <div class="mt-2">
+              Cette sous-catégorie ne peut pas être supprimée car elle contient :
+              <ul class="mt-2 mb-0">
+                <li>
+                  <strong>{{ subCategoryDependencies.prestations }}</strong> prestation{{ subCategoryDependencies.prestations > 1 ? 's' : '' }}
+                </li>
+              </ul>
+              <p class="mt-2 mb-0">
+                Veuillez d'abord supprimer toutes les prestations qui en dépendent.
+              </p>
+            </div>
+          </VAlert>
+          
+          <p
+            v-else
+            class="text-sm text-medium-emphasis"
+          >
+            Cette action est irréversible et supprimera définitivement la sous-catégorie.
           </p>
         </VCardText>
 
@@ -362,18 +420,19 @@ const filteredSubCategories = computed(() => {
             color="secondary"
             @click="isDeleteModalVisible = false"
           >
-            Cancel
+            Annuler
           </VBtn>
           <VBtn
             color="error"
             variant="flat"
+            :disabled="subCategoryDependencies.prestations > 0"
             @click="confirmDelete"
           >
             <VIcon
               icon="tabler-trash"
               class="me-2"
             />
-            Delete
+            Supprimer
           </VBtn>
         </VCardActions>
       </VCard>

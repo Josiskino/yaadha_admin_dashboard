@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore'
 import AddCategoryDrawer from './add-category.vue'
 
 // Composable pour gérer les catégories avec Firebase
@@ -20,9 +20,27 @@ const showNotification = (message, type = 'success') => {
 // 👉 Delete Confirmation Modal
 const isDeleteModalVisible = ref(false)
 const categoryToDelete = ref(null)
+const categoryDependencies = ref({ subCategories: 0, prestations: 0 })
 
-const showDeleteConfirmation = categoryId => {
+const showDeleteConfirmation = async categoryId => {
   categoryToDelete.value = categoryId
+  
+  // Vérifier les dépendances avant d'afficher le modal
+  try {
+    const [subCategoriesSnapshot, prestationsSnapshot] = await Promise.all([
+      getDocs(query(collection(db, 'subcategories'), where('categoryId', '==', categoryId))),
+      getDocs(query(collection(db, 'prestations'), where('categoryId', '==', categoryId))),
+    ])
+    
+    categoryDependencies.value = {
+      subCategories: subCategoriesSnapshot.size,
+      prestations: prestationsSnapshot.size,
+    }
+  } catch (error) {
+    console.error('Error checking dependencies:', error)
+    categoryDependencies.value = { subCategories: 0, prestations: 0 }
+  }
+  
   isDeleteModalVisible.value = true
 }
 
@@ -30,6 +48,35 @@ const confirmDelete = async () => {
   if (!categoryToDelete.value) return
   
   try {
+    // Vérifier les dépendances avant de supprimer
+    const [subCategoriesSnapshot, prestationsSnapshot] = await Promise.all([
+      getDocs(query(collection(db, 'subcategories'), where('categoryId', '==', categoryToDelete.value))),
+      getDocs(query(collection(db, 'prestations'), where('categoryId', '==', categoryToDelete.value))),
+    ])
+    
+    const subCategoriesCount = subCategoriesSnapshot.size
+    const prestationsCount = prestationsSnapshot.size
+    
+    // Si la catégorie a des dépendances, afficher un message d'erreur
+    if (subCategoriesCount > 0 || prestationsCount > 0) {
+      const messages = []
+      if (subCategoriesCount > 0) {
+        messages.push(`${subCategoriesCount} sous-catégorie${subCategoriesCount > 1 ? 's' : ''}`)
+      }
+      if (prestationsCount > 0) {
+        messages.push(`${prestationsCount} prestation${prestationsCount > 1 ? 's' : ''}`)
+      }
+      
+      showNotification(
+        `Impossible de supprimer cette catégorie. Veuillez d'abord supprimer ${messages.join(' et ')} qui en dépendent.`,
+        'error'
+      )
+      isDeleteModalVisible.value = false
+      categoryToDelete.value = null
+      return
+    }
+    
+    // Supprimer la catégorie si aucune dépendance
     await deleteDoc(doc(db, 'categories', categoryToDelete.value))
     
     // Delete from selectedRows
@@ -38,10 +85,26 @@ const confirmDelete = async () => {
     if (index !== -1)
       selectedRows.value.splice(index, 1)
     
-    // Refetch categories
-    const fetchedCategories = await fetchCategories()
+    // Refetch categories and subcategories
+    const [fetchedCategories, fetchedSubCategories] = await Promise.all([
+      fetchCategories(),
+      fetchSubCategories(),
+    ])
     
-    categories.value = fetchedCategories
+    // Compter les sous-catégories pour chaque catégorie
+    const categoriesWithCount = fetchedCategories.map(category => {
+      const subCategoriesCount = fetchedSubCategories.filter(
+        subCat => subCat.categoryId === category.id
+      ).length
+      
+      return {
+        ...category,
+        subCategoriesCount,
+      }
+    })
+    
+    categories.value = categoriesWithCount
+    subCategories.value = fetchedSubCategories
     
     // Show success notification
     showNotification('Category deleted successfully!', 'success')
@@ -104,6 +167,27 @@ const headers = [
   },
 ]
 
+// 👉 Fetch subcategories from Firebase
+const fetchSubCategories = async () => {
+  try {
+    const subCategoriesCollection = collection(db, 'subcategories')
+    const snapshot = await getDocs(subCategoriesCollection)
+    const subCategories = []
+    
+    snapshot.forEach(doc => {
+      subCategories.push({
+        id: doc.id,
+        ...doc.data(),
+      })
+    })
+    
+    return subCategories
+  } catch (error) {
+    console.error('Error fetching subcategories:', error)
+    return []
+  }
+}
+
 // 👉 Fetch categories from Firebase
 const fetchCategories = async () => {
   try {
@@ -127,14 +211,32 @@ const fetchCategories = async () => {
 }
 
 const categories = ref([])
+const subCategories = ref([])
 const totalCategories = ref(0)
 
 onMounted(async () => {
   try {
-    const fetchedCategories = await fetchCategories()
+    // Charger les catégories et sous-catégories en parallèle
+    const [fetchedCategories, fetchedSubCategories] = await Promise.all([
+      fetchCategories(),
+      fetchSubCategories(),
+    ])
     
-    categories.value = fetchedCategories
-    totalCategories.value = fetchedCategories.length
+    // Compter les sous-catégories pour chaque catégorie
+    const categoriesWithCount = fetchedCategories.map(category => {
+      const subCategoriesCount = fetchedSubCategories.filter(
+        subCat => subCat.categoryId === category.id
+      ).length
+      
+      return {
+        ...category,
+        subCategoriesCount,
+      }
+    })
+    
+    categories.value = categoriesWithCount
+    subCategories.value = fetchedSubCategories
+    totalCategories.value = categoriesWithCount.length
   } catch (error) {
     console.error('Error loading categories:', error)
     showNotification('Error loading data. Please refresh the page.', 'error')
@@ -223,8 +325,10 @@ const resolveCategoryStatusVariant = stat => {
 }
 
 const isAddNewCategoryDrawerVisible = ref(false)
-const isManageSubCategoriesDrawerVisible = ref(false)
+const isManageSubCategoriesModalVisible = ref(false)
 const selectedCategory = ref(null)
+const categorySubCategories = ref([])
+const selectedCategoryForSubCategories = ref(null)
 
 const addNewCategory = async categoryData => {
   try {
@@ -266,9 +370,25 @@ const openEditCategory = category => {
   isAddNewCategoryDrawerVisible.value = true
 }
 
-const openManageSubCategories = category => {
-  selectedCategory.value = category
-  isManageSubCategoriesDrawerVisible.value = true
+const openManageSubCategories = async category => {
+  selectedCategoryForSubCategories.value = category
+  
+  // Charger les sous-catégories de cette catégorie
+  try {
+    const subCategoriesSnapshot = await getDocs(
+      query(collection(db, 'subcategories'), where('categoryId', '==', category.id))
+    )
+    
+    categorySubCategories.value = subCategoriesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+    
+    isManageSubCategoriesModalVisible.value = true
+  } catch (error) {
+    console.error('Error fetching sub-categories:', error)
+    showNotification('Erreur lors du chargement des sous-catégories', 'error')
+  }
 }
 
 // Statistics widgets
@@ -513,7 +633,7 @@ watch(categories, newCategories => {
             size="small"
             variant="tonal"
           >
-            {{ item.subCategories?.length || 0 }} sub-categories
+            {{ item.subCategoriesCount || 0 }} sous-catégories
           </VChip>
         </template>
 
@@ -531,17 +651,38 @@ watch(categories, newCategories => {
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <IconBtn @click="deleteCategory(item.id)">
-            <VIcon icon="tabler-trash" />
-          </IconBtn>
+          <VTooltip text="Supprimer la catégorie">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="deleteCategory(item.id)"
+              >
+                <VIcon icon="tabler-trash" />
+              </IconBtn>
+            </template>
+          </VTooltip>
 
-          <IconBtn @click="openManageSubCategories(item)">
-            <VIcon icon="tabler-folders" />
-          </IconBtn>
+          <VTooltip text="Gérer les sous-catégories">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="openManageSubCategories(item)"
+              >
+                <VIcon icon="tabler-folders" />
+              </IconBtn>
+            </template>
+          </VTooltip>
 
-          <IconBtn @click="openEditCategory(item)">
-            <VIcon icon="tabler-pencil" />
-          </IconBtn>
+          <VTooltip text="Modifier la catégorie">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="openEditCategory(item)"
+              >
+                <VIcon icon="tabler-pencil" />
+              </IconBtn>
+            </template>
+          </VTooltip>
 
           <VBtn
             icon
@@ -622,10 +763,38 @@ watch(categories, newCategories => {
 
         <VCardText>
           <p class="text-base mb-4">
-            Are you sure you want to delete this category?
+            Êtes-vous sûr de vouloir supprimer cette catégorie ?
           </p>
-          <p class="text-sm text-medium-emphasis">
-            This action is irreversible and will permanently delete the category along with all its sub-categories.
+          
+          <!-- Afficher les dépendances si elles existent -->
+          <VAlert
+            v-if="categoryDependencies.subCategories > 0 || categoryDependencies.prestations > 0"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
+            <VAlertTitle>Impossible de supprimer</VAlertTitle>
+            <div class="mt-2">
+              Cette catégorie ne peut pas être supprimée car elle contient :
+              <ul class="mt-2 mb-0">
+                <li v-if="categoryDependencies.subCategories > 0">
+                  <strong>{{ categoryDependencies.subCategories }}</strong> sous-catégorie{{ categoryDependencies.subCategories > 1 ? 's' : '' }}
+                </li>
+                <li v-if="categoryDependencies.prestations > 0">
+                  <strong>{{ categoryDependencies.prestations }}</strong> prestation{{ categoryDependencies.prestations > 1 ? 's' : '' }}
+                </li>
+              </ul>
+              <p class="mt-2 mb-0">
+                Veuillez d'abord supprimer toutes les sous-catégories et prestations qui en dépendent.
+              </p>
+            </div>
+          </VAlert>
+          
+          <p
+            v-else
+            class="text-sm text-medium-emphasis"
+          >
+            Cette action est irréversible et supprimera définitivement la catégorie.
           </p>
         </VCardText>
 
@@ -635,21 +804,178 @@ watch(categories, newCategories => {
             color="secondary"
             @click="isDeleteModalVisible = false"
           >
-            Cancel
+            Annuler
           </VBtn>
           <VBtn
             color="error"
             variant="flat"
+            :disabled="categoryDependencies.subCategories > 0 || categoryDependencies.prestations > 0"
             @click="confirmDelete"
           >
             <VIcon
               icon="tabler-trash"
               class="me-2"
             />
-            Delete
+            Supprimer
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- 👉 Modal pour afficher les sous-catégories -->
+    <VDialog
+      v-model="isManageSubCategoriesModalVisible"
+      max-width="800"
+      scrollable
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center justify-space-between pa-6">
+          <div class="d-flex align-center">
+            <VIcon
+              icon="tabler-folders"
+              color="primary"
+              class="me-3"
+              size="28"
+            />
+            <div>
+              <div class="text-h5">
+                Sous-catégories
+              </div>
+              <div
+                v-if="selectedCategoryForSubCategories"
+                class="text-body-2 text-medium-emphasis"
+              >
+                Catégorie : {{ selectedCategoryForSubCategories.name }}
+              </div>
+            </div>
+          </div>
+          <VBtn
+            icon
+            variant="text"
+            size="small"
+            @click="isManageSubCategoriesModalVisible = false"
+          >
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </VCardTitle>
+
+        <VDivider />
+
+        <VCardText class="pa-6">
+          <div v-if="categorySubCategories.length === 0">
+            <VAlert
+              type="info"
+              variant="tonal"
+              class="mb-0"
+            >
+              <VAlertTitle>Aucune sous-catégorie</VAlertTitle>
+              Cette catégorie n'a pas encore de sous-catégories.
+            </VAlert>
+          </div>
+
+          <div
+            v-else
+            class="d-flex flex-column gap-4"
+          >
+            <VCard
+              v-for="subCategory in categorySubCategories"
+              :key="subCategory.id"
+              variant="outlined"
+              class="subcategory-card"
+            >
+              <VCardText class="d-flex align-center justify-space-between pa-4">
+                <div class="d-flex align-center flex-grow-1">
+                  <VAvatar
+                    v-if="subCategory.imageUrl"
+                    size="48"
+                    rounded
+                    class="me-4"
+                  >
+                    <VImg :src="subCategory.imageUrl" />
+                  </VAvatar>
+                  <VAvatar
+                    v-else
+                    size="48"
+                    rounded
+                    color="primary"
+                    variant="tonal"
+                    class="me-4"
+                  >
+                    <VIcon
+                      icon="tabler-folder"
+                      size="24"
+                    />
+                  </VAvatar>
+                  
+                  <div class="flex-grow-1">
+                    <div class="text-h6 mb-1">
+                      {{ subCategory.name }}
+                    </div>
+                    <div
+                      v-if="subCategory.description"
+                      class="text-body-2 text-medium-emphasis"
+                    >
+                      {{ subCategory.description }}
+                    </div>
+                    <div
+                      v-else
+                      class="text-body-2 text-disabled"
+                    >
+                      Aucune description
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex align-center gap-2">
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    @click="$router.push({ name: 'categories-subcategories-dashboard', query: { category: selectedCategoryForSubCategories?.id } })"
+                  >
+                    <VIcon icon="tabler-external-link" />
+                    <VTooltip activator="parent">
+                      Voir les détails
+                    </VTooltip>
+                  </VBtn>
+                </div>
+              </VCardText>
+            </VCard>
+          </div>
+        </VCardText>
+
+        <VDivider />
+
+        <VCardActions class="pa-6">
+          <VSpacer />
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isManageSubCategoriesModalVisible = false"
+          >
+            Fermer
+          </VBtn>
+          <VBtn
+            color="primary"
+            prepend-icon="tabler-plus"
+            @click="$router.push({ name: 'categories-subcategories-dashboard' }); isManageSubCategoriesModalVisible = false"
+          >
+            Ajouter une sous-catégorie
           </VBtn>
         </VCardActions>
       </VCard>
     </VDialog>
   </section>
 </template>
+
+<style scoped>
+.subcategory-card {
+  transition: all 0.2s ease;
+}
+
+.subcategory-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+</style>

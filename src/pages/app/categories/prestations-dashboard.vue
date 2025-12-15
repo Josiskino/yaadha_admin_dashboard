@@ -317,13 +317,27 @@ const filteredSubCategories = computed(() => {
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <IconBtn @click="editPrestation(item)">
-            <VIcon icon="tabler-edit" />
-          </IconBtn>
+          <VTooltip text="Modifier la prestation">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="editPrestation(item)"
+              >
+                <VIcon icon="tabler-edit" />
+              </IconBtn>
+            </template>
+          </VTooltip>
 
-          <IconBtn @click="showDeleteConfirmation(item.id)">
-            <VIcon icon="tabler-trash" />
-          </IconBtn>
+          <VTooltip text="Supprimer la prestation">
+            <template #activator="{ props }">
+              <IconBtn
+                v-bind="props"
+                @click="showDeleteConfirmation(item.id)"
+              >
+                <VIcon icon="tabler-trash" />
+              </IconBtn>
+            </template>
+          </VTooltip>
         </template>
 
         <!-- Pagination -->
