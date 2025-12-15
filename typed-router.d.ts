@@ -26,6 +26,7 @@ declare module 'vue-router/auto-routes' {
     'categories-add-prestation': RouteRecordInfo<'categories-add-prestation', '/categories/add-prestation', Record<never, never>, Record<never, never>>,
     'categories-add-subcategory': RouteRecordInfo<'categories-add-subcategory', '/categories/add-subcategory', Record<never, never>, Record<never, never>>,
     'categories-categories-dashboard': RouteRecordInfo<'categories-categories-dashboard', '/categories/categories-dashboard', Record<never, never>, Record<never, never>>,
+    'categories-import-data': RouteRecordInfo<'categories-import-data', '/categories/import-data', Record<never, never>, Record<never, never>>,
     'categories-prestations-dashboard': RouteRecordInfo<'categories-prestations-dashboard', '/categories/prestations-dashboard', Record<never, never>, Record<never, never>>,
     'categories-subcategories-dashboard': RouteRecordInfo<'categories-subcategories-dashboard', '/categories/subcategories-dashboard', Record<never, never>, Record<never, never>>,
     'dashboard-dashboard': RouteRecordInfo<'dashboard-dashboard', '/dashboard/dashboard', Record<never, never>, Record<never, never>>,

@@ -432,6 +432,16 @@ watch(categories, newCategories => {
             Export
           </VBtn>
 
+          <!-- 👉 Import en masse button -->
+          <VBtn
+            variant="tonal"
+            color="info"
+            prepend-icon="tabler-file-import"
+            @click="$router.push({ name: 'categories-import-data' })"
+          >
+            Import en masse
+          </VBtn>
+
           <!-- 👉 Add category button -->
           <VBtn
             prepend-icon="tabler-plus"

@@ -37,6 +37,10 @@ export default [
         title: 'Prestations',
         to: 'categories-prestations-dashboard',
       },
+      {
+        title: 'Import en masse',
+        to: 'categories-import-data',
+      },
     ],
   },
   {
