@@ -279,6 +279,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 import { useFirebase } from '@/composables/useFirebase'
+import { auth } from '@/config/firebase'
 
 definePage({
   meta: {
@@ -287,7 +288,7 @@ definePage({
   },
 })
 
-const { db, showNotification } = useFirebase()
+const { db, showNotification, currentUser } = useFirebase()
 
 // Notifications
 const snackbar = ref(false)
@@ -535,6 +536,12 @@ function calculatePreviewStats() {
 // Fonction principale d'import
 async function startImport() {
   if (isImporting.value) return
+
+  // Vérifier que l'utilisateur est authentifié
+  if (!auth.currentUser) {
+    showSnackbar('Vous devez être connecté pour importer des données. Veuillez vous reconnecter.', 'error')
+    return
+  }
 
   // Confirmation
   if (!confirm(`Voulez-vous vraiment importer ${previewStats.value.categories} catégories, ${previewStats.value.subcategories} sous-catégories et ${previewStats.value.prestations} prestations ?`)) {

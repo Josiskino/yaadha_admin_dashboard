@@ -366,6 +366,7 @@
     "useTemplateRef": true,
     "fixAdminRole": true,
     "fixAdminRoleConsoleScript": true,
-    "useCloudinary": true
+    "useCloudinary": true,
+    "useFirebaseStorage": true
   }
 }

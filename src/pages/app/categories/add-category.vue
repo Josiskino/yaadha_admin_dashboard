@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { useFirebase } from '@/composables/useFirebase'
-import { useCloudinary } from '@/composables/useCloudinary'
+import { useFirebaseStorage } from '@/composables/useFirebaseStorage'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -98,14 +98,14 @@ const onSubmit = async () => {
       isUploading.value = true
       let finalImageUrl = imageUrl.value
 
-      // Si un nouveau fichier a été sélectionné, l'uploader vers Cloudinary
+      // Si un nouveau fichier a été sélectionné, l'uploader vers Firebase Storage
       if (imageFile.value) {
-        const { uploadImage } = useCloudinary()
+        const { uploadImage } = useFirebaseStorage()
         const result = await uploadImage(imageFile.value, 'categories')
         
         if (result.success) {
           finalImageUrl = result.url
-          console.log('✅ Image uploaded to Cloudinary:', result.url)
+          console.log('✅ Image uploaded to Firebase Storage:', result.url)
         } else {
           throw new Error(result.error || 'Upload failed')
         }

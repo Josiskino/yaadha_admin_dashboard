@@ -5,12 +5,64 @@ service cloud.firestore {
     match /otps/{email} {
       allow read, write: if false;
     }
-    
+
     // Collection users - L'utilisateur peut seulement lire/écrire ses propres données
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
-    
+
+    // Collection providerOnboarding - L'utilisateur peut seulement lire/écrire sa propre progression d'onboarding
+    match /providerOnboarding/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Collection providers - Les prestataires peuvent lire/écrire leurs propres données
+    match /providers/{providerId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null && request.auth.uid == providerId;
+    }
+
+    // Collection clients - Les clients peuvent lire/écrire leurs propres données
+    match /clients/{clientId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null && request.auth.uid == clientId;
+    }
+
+    // Collection bookings - Les utilisateurs authentifiés peuvent lire leurs réservations
+    // Les clients peuvent créer/mettre à jour leurs réservations
+    // Les prestataires peuvent mettre à jour les réservations qui leur sont assignées
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        request.resource.data.clientId == request.auth.uid ||
+        request.resource.data.providerId == request.auth.uid
+      );
+      allow delete: if request.auth != null && (
+        resource.data.clientId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid
+      );
+    }
+
+    // Collection services - Les prestataires peuvent créer/mettre à jour leurs services
+    // Tous les utilisateurs authentifiés peuvent lire les services
+    match /services/{serviceId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        resource.data.providerId == request.auth.uid
+      );
+    }
+
+    // Collection reviews - Les utilisateurs authentifiés peuvent lire les avis
+    // Les clients peuvent créer leurs avis
+    // Les prestataires peuvent lire les avis sur leurs services
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.clientId == request.auth.uid;
+    }
+
     // Collection admin - Les utilisateurs authentifiés peuvent créer/lire/mettre à jour les documents admin
     match /admin/{adminId} {
       // Permettre aux utilisateurs de créer leur propre document lors de l'inscription
@@ -22,25 +74,25 @@ service cloud.firestore {
       // Permettre la suppression uniquement pour les utilisateurs authentifiés
       allow delete: if request.auth != null;
     }
-    
+
     // Collection categories - Lecture publique (pour l'app mobile), écriture admin uniquement
     match /categories/{categoryId} {
       allow read: if true; // Public pour l'app mobile
       allow write: if request.auth != null; // Écriture admin uniquement
     }
-    
+
     // Collection subcategories - Lecture publique (pour l'app mobile), écriture admin uniquement
     match /subcategories/{subCategoryId} {
       allow read: if true; // Public pour l'app mobile
       allow write: if request.auth != null; // Écriture admin uniquement
     }
-    
+
     // Collection prestations - Lecture publique (pour l'app mobile), écriture admin uniquement
     match /prestations/{prestationId} {
       allow read: if true; // Public pour l'app mobile
       allow write: if request.auth != null; // Écriture admin uniquement
     }
-    
+
     // Interdire tout autre accès par défaut
     match /{document=**} {
       allow read, write: if false;

@@ -227,6 +227,7 @@ declare global {
   const useFileDialog: typeof import('@vueuse/core')['useFileDialog']
   const useFileSystemAccess: typeof import('@vueuse/core')['useFileSystemAccess']
   const useFirebase: typeof import('./src/composables/useFirebase.js')['useFirebase']
+  const useFirebaseStorage: typeof import('./src/composables/useFirebaseStorage.js')['useFirebaseStorage']
   const useFirebaseTest: typeof import('./src/composables/useFirebaseTest.js')['useFirebaseTest']
   const useFloor: typeof import('@vueuse/math')['useFloor']
   const useFocus: typeof import('@vueuse/core')['useFocus']
@@ -592,6 +593,7 @@ declare module 'vue' {
     readonly useFileDialog: UnwrapRef<typeof import('@vueuse/core')['useFileDialog']>
     readonly useFileSystemAccess: UnwrapRef<typeof import('@vueuse/core')['useFileSystemAccess']>
     readonly useFirebase: UnwrapRef<typeof import('./src/composables/useFirebase.js')['useFirebase']>
+    readonly useFirebaseStorage: UnwrapRef<typeof import('./src/composables/useFirebaseStorage.js')['useFirebaseStorage']>
     readonly useFirebaseTest: UnwrapRef<typeof import('./src/composables/useFirebaseTest.js')['useFirebaseTest']>
     readonly useFloor: UnwrapRef<typeof import('@vueuse/math')['useFloor']>
     readonly useFocus: UnwrapRef<typeof import('@vueuse/core')['useFocus']>

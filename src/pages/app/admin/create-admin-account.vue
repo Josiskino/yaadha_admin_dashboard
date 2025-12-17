@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router'
 
 // Firebase config for logging
 const FIREBASE_PROJECT_ID = 'yaadha-dev'
-const FIREBASE_DATABASE_ID = 'yaadha-db-dev'
+const FIREBASE_DATABASE_ID = '(default)' // Using default database
 
 definePage({
   meta: {
@@ -19,11 +19,11 @@ const router = useRouter()
 const { signUp, loading: firebaseLoading, error: firebaseError } = useFirebase()
 
 const refForm = ref()
-const fullName = ref('')
-const email = ref('')
+const fullName = ref('Josue Admin')
+const email = ref('josue.admin@yaadha.com')
 const password = ref('yaadhapassword')
 const showPassword = ref(true)
-const country = ref()
+const country = ref('tg') // Togo par défaut
 const contact = ref('')
 const status = ref('pending')
 const countrySearch = ref('')
